@@ -7,3 +7,6 @@
 *.ilk
 *.recipe
 *.lastbuildstate
+*/.vs
+x64
+x32
