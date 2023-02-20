@@ -7,8 +7,11 @@ uniform mat4 _View;
 uniform mat4 _Projection;
 
 out vec3 Normal;
+out vec3 WorldPosition;
 
-void main(){    
+void main()
+{    
+    WorldPosition = vec3(_Model * vec4(vPos,1));
     Normal = vNormal;
     gl_Position = _Projection * _View * _Model * vec4(vPos,1);
 }

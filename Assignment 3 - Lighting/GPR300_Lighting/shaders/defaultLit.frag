@@ -113,12 +113,22 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec
 {
     vec3 temp;
 
-    vec3 lightDir = normalize(fragmentPosition - light.position);
-    float theta = dot(lightDir,normalize(-light.direction));
+    vec3 DirToFrag = normalize(fragmentPosition - light.position);
+    float costTheta = dot(DirToFrag,normalize(-light.direction));
+    float theta = acos(costTheta);
 
-    if(theta > cos(light.maxAngle))
+    if(theta > light.maxAngle)
     {
-        
+        float angularAttenuation = pow(clamp(((theta - light.minAngle)/(light.minAngle-light.maxAngle)),0.0f,1.0f),2.0f);
+        float dist = distance(fragmentPosition,light.position);
+        float distanceAttenutation = pow(clamp((1-pow((dist/light.radius),4.0f)),0.0f,1.0f),2.0f);
+
+        vec3 ambient = material.ambient * distanceAttenutation * angularAttenuation;
+
+        vec3 diffuse = material.diffuse * max(dot(DirToFrag,normal),0.0f) * angularAttenuation * distanceAttenutation;
+
+        vec3 halfVector = normalize((DirToFrag + cameraDirection));
+        vec3 specular = material.specular * max(dot(normal,halfVector),0.0f) * material.shininess * angularAttenuation * distanceAttenutation;
     }
 
     return vec3(0.0f);
