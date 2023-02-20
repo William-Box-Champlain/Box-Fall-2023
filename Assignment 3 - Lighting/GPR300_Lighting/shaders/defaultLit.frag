@@ -6,46 +6,46 @@ in vec3 Normal;
 
 struct Material
 {
-    vec3 ambient;
-    vec3 diffuse;
-    vec3 specular;
-    float shininess;
+    vec3 mAmbient;
+    vec3 mDiffuse;
+    vec3 mSpecular;
+    float mShininess;
 };
 
 struct SpotLight
 {
-    vec3 color;
+    vec3 mColor;
 
-    vec3 position;
+    vec3 mPosition;
 
-    vec3 direction;
+    vec3 mDirection;
 
-    float intensity;
-    float radius;
+    float mIntensity;
+    float mRadius;
 
-    float minAngle;
-    float maxAngle;
+    float mMinAngle;
+    float mMaxAngle;
 };
 
 struct PointLight
 {
-    vec3 position;
+    vec3 mPosition;
 
-    vec3 color;
+    vec3 mColor;
 
-    float intensity;
+    float mIntensity;
 
-    float radius;
+    float mRadius;
 
 };
 
 struct DirLight
 {
-    vec3 direction;
+    vec3 mDirection;
 
-    vec3 color;
+    vec3 mColor;
 
-    float intensity;
+    float mIntensity;
 };
 
 vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection);
@@ -75,60 +75,62 @@ void main(){
 
     for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
 
-    FragColor = vec4(abs(Normal),1.0f);
+    FragColor = vec4(totalLight,1.0f);
 }
 
 vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection)
 {
-    vec3 ambient = material.ambient * light.intensity;
+    vec3 ambient = material.mAmbient * light.mIntensity;
 
-    vec3 lightDirection = normalize(-light.direction);
-    vec3 diffuse = material.diffuse * max(dot(lightDirection,normal),0.0f) * light.intensity;
+    vec3 lightDirection = normalize(-light.mDirection);
+    vec3 diffuse = material.mDiffuse * max(dot(normal,lightDirection),0.0f) * light.mIntensity;
 
-    vec3 halfVector = normalize((light.direction + cameraDirection));
-    vec3 specular = material.specular * max(dot(normal,halfVector),0.0f) * material.shininess * light.intensity;
+    vec3 halfVector = normalize((light.mDirection + cameraDirection));
+    vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * light.mIntensity;
 
-    return (ambient + diffuse + specular);
+    return light.mColor * (ambient + diffuse + specular);
 }
 
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection)
 {
     vec3 temp;
 
-    float dist = distance(fragmentPosition,light.position);
-    float attenuatedIntensity = pow(clamp((1 - pow((dist/light.radius),4.0f)),0.0f,1.0f),2.0f);
+    float dist = distance(fragmentPosition,light.mPosition);
+    float attenuatedIntensity = pow(clamp((1 - pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
 
-    vec3 ambient = material.ambient * attenuatedIntensity;
+    vec3 ambient = material.mAmbient * attenuatedIntensity;
 
-    vec3 lightDirection = normalize(fragmentPosition - light.position);
-    vec3 diffuse = material.diffuse * max(dot(lightDirection,normal),0.0f) * attenuatedIntensity;
+    vec3 lightDirection = normalize(fragmentPosition - light.mPosition);
+    vec3 diffuse = material.mDiffuse * max(dot(normal,lightDirection),0.0f) * attenuatedIntensity;
 
     vec3 halfVector = normalize((lightDirection + cameraDirection));
-    vec3 specular = material.specular * max(dot(normal,halfVector),0.0f) * material.shininess * attenuatedIntensity;
+    vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * attenuatedIntensity * light.mIntensity;
 
-    return (ambient + diffuse + specular);
+    return light.mColor * (ambient + diffuse + specular);
 }
 
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition)
 {
     vec3 temp;
 
-    vec3 DirToFrag = normalize(fragmentPosition - light.position);
-    float costTheta = dot(DirToFrag,normalize(-light.direction));
+    vec3 DirToFrag = normalize(fragmentPosition - light.mPosition);
+    float costTheta = dot(DirToFrag,normalize(-light.mDirection));
     float theta = acos(costTheta);
 
-    if(theta > light.maxAngle)
+    if(theta > light.mMaxAngle)
     {
-        float angularAttenuation = pow(clamp(((theta - light.minAngle)/(light.minAngle-light.maxAngle)),0.0f,1.0f),2.0f);
-        float dist = distance(fragmentPosition,light.position);
-        float distanceAttenutation = pow(clamp((1-pow((dist/light.radius),4.0f)),0.0f,1.0f),2.0f);
+        float angularAttenuation = pow(clamp(((theta - light.mMinAngle)/(light.mMinAngle-light.mMaxAngle)),0.0f,1.0f),2.0f);
+        float dist = distance(fragmentPosition,light.mPosition);
+        float distanceAttenutation = pow(clamp((1-pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
 
-        vec3 ambient = material.ambient * distanceAttenutation * angularAttenuation;
+        vec3 ambient = material.mAmbient * distanceAttenutation * angularAttenuation;
 
-        vec3 diffuse = material.diffuse * max(dot(DirToFrag,normal),0.0f) * angularAttenuation * distanceAttenutation;
+        vec3 diffuse = material.mDiffuse * max(dot(normal,DirToFrag),0.0f) * angularAttenuation * distanceAttenutation;
 
         vec3 halfVector = normalize((DirToFrag + cameraDirection));
-        vec3 specular = material.specular * max(dot(normal,halfVector),0.0f) * material.shininess * angularAttenuation * distanceAttenutation;
+        vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * angularAttenuation * distanceAttenutation;
+
+        return light.mColor * (ambient + diffuse + specular);
     }
 
     return vec3(0.0f);
