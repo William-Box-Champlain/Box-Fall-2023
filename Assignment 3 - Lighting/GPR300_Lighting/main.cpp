@@ -69,6 +69,9 @@ SpotLight spotLight = { spotLight.mColor = glm::vec3(128, 128, 128),
 	spotLight.mMinAngle = float(12.5f),
 	spotLight.mMaxAngle = float(25.0f) };
 
+float pointLightZeroDistance = 1.0f;
+glm::vec3 pointLightDirection = glm::vec3(0.0f);
+
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
@@ -155,38 +158,38 @@ int main() {
 	lightTransform.position = glm::vec3(0.0f, 5.0f, 0.0f);
 
 	//Initialize material values
-	material.mAmbient = glm::vec3(128, 128, 128);
-	material.mDiffuse = glm::vec3(64, 64, 64);
-	material.mSpecular = glm::vec3(32, 32, 32);
-	material.mShininess = float(16.0f);
+	material.mAmbient = glm::vec3(0.75f, 0.75f, 0.75f);
+	material.mDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	material.mSpecular = glm::vec3(0.25f, 0.25f, 0.25f);
+	material.mShininess = float(1.0f);
 
 	//Initialize directional light values
-	directionalLight.mColor = glm::vec3(128, 128, 128);
+	directionalLight.mColor = glm::vec3(0.75f, 0.75f, 0.75f);
 	directionalLight.mDirection = glm::normalize(glm::vec3(1.0f));
-	directionalLight.mIntensity = float(16.0f);
+	directionalLight.mIntensity = float(0.5f);
 
 	//Initialize spot light values
-	spotLight.mColor = glm::vec3(128, 128, 128);
+	spotLight.mColor = glm::vec3(0.5f, 0.5f, 0.5f);
 	spotLight.mDirection = glm::vec3(0.0f, -1.0f, 0.0f);
-	spotLight.mIntensity = float(1.0f);
+	spotLight.mIntensity = float(0.5f);
 	spotLight.mPosition = lightTransform.position;
 	spotLight.mRadius = float(12.0f);
 	spotLight.mMinAngle = float(12.5f);
 	spotLight.mMaxAngle = float(25.0f);
 
 	//Initialize point light values
-	pointLights[0].mColor = glm::vec3(256.0f, 0.0f, 0.0f);
-	pointLights[0].mIntensity = float(1.0f);
+	pointLights[0].mColor = glm::vec3(0.5f, 0.0f, 0.0f);
+	pointLights[0].mIntensity = float(0.5f);
 	pointLights[0].mRadius = float(7.0f);
 	pointLights[0].mPosition = glm::vec3(4.0f, 5.0f, 0.0f);
 
-	pointLights[1].mColor = glm::vec3(0.0f, 256.0f, 0.0f);
-	pointLights[1].mIntensity = float(1.0f);
+	pointLights[1].mColor = glm::vec3(0.0f, 0.0f, 0.0f);
+	pointLights[1].mIntensity = float(0.5f);
 	pointLights[1].mRadius = float(7.0f);
 	pointLights[1].mPosition = glm::vec3(-4.0f, 5.0f, 0.0f);
 
-	pointLights[2].mColor = glm::vec3(0.0f, 0.0f, 256.0f);
-	pointLights[2].mIntensity = float(1.0f);
+	pointLights[2].mColor = glm::vec3(0.0f, 0.0f, 0.0f);
+	pointLights[2].mIntensity = float(0.5f);
 	pointLights[2].mRadius = float(7.0f);
 	pointLights[2].mPosition = glm::vec3(0.0f, 5.0f, 4.0f);
 
@@ -218,6 +221,8 @@ int main() {
 		//Process Lights
 		processDirectionalLight(litShader, "dirLight", directionalLight);
 		processSpotLight(litShader, "spotLight", spotLight);
+
+		pointLights[0].mPosition = pointLightZeroDistance * glm::normalize(pointLightDirection);
 
 		litShader.setInt("numberOfPointLights", NUMBER_OF_POINTLIGHTS);
 		for (size_t i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
@@ -256,9 +261,17 @@ int main() {
 
 		//Draw UI
 		ImGui::Begin("Settings");
+	
+		ImGui::ColorEdit3("Material Ambient", &material.mAmbient.r);
+		ImGui::ColorEdit3("Material Diffuse", &material.mDiffuse.r);
+		ImGui::ColorEdit3("Material Specular", &material.mSpecular.r);
+		ImGui::DragFloat("Material Shininess", &material.mShininess, 0.01f, 0.0f, 2.0f);
 
-		ImGui::ColorEdit3("Light Color", &lightColor.r);
-		ImGui::DragFloat3("Light Position", &lightTransform.position.x);
+		ImGui::ColorEdit3("Light Color", &pointLights[0].mColor.r);
+		ImGui::ColorEdit3("Light Direction", &pointLightDirection.r);
+		ImGui::DragFloat("Light Distance", &pointLightZeroDistance, 0.1f, 0.0f, 20.0f);
+		ImGui::DragFloat("Light Radius", &pointLights[0].mRadius, 0.01f, 0.0f, 20.0f);
+		ImGui::DragFloat("Light Intensity", &pointLights[0].mIntensity, 0.01f, 0.0f, 20.0f);
 		ImGui::End();
 
 		ImGui::Render();

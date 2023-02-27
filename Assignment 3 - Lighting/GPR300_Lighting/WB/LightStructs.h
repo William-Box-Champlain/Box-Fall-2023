@@ -69,9 +69,10 @@ void processMaterial(Shader& shader, std::string materialName, Material material
 }
 
 void processDirectionalLight(Shader& shader, std::string lightName, DirLight light)
-{
+  {
 	std::stringstream ss0;
 	ss0 << lightName;
+	shader.setVec3(ss0.str() + ".mColor", light.mColor);
 	shader.setVec3(ss0.str() + ".mDirection", light.mDirection);
 	shader.setFloat(ss0.str() + ".mIntensity", light.mIntensity);
 }
@@ -83,10 +84,10 @@ void processSpotLight(Shader& shader, std::string lightName, SpotLight light)
 	shader.setVec3(ss0.str() + ".mPosition", light.mPosition);
 	shader.setVec3(ss0.str() + ".mDirection", light.mDirection);
 	shader.setVec3(ss0.str() + ".mColor", light.mColor);
-	shader.setFloat(ss0.str() + "mIntensity", light.mIntensity);
-	shader.setFloat(ss0.str() + "mRadius", light.mRadius);
-	shader.setFloat(ss0.str() + "mMinAngle", light.mMinAngle);
-	shader.setFloat(ss0.str() + "mMaxAngle", light.mMaxAngle);
+	shader.setFloat(ss0.str() + ".mIntensity", light.mIntensity);
+	shader.setFloat(ss0.str() + ".mRadius", light.mRadius);
+	shader.setFloat(ss0.str() + ".mMinAngle", light.mMinAngle);
+	shader.setFloat(ss0.str() + ".mMaxAngle", light.mMaxAngle);
 	
 }
 
@@ -98,10 +99,10 @@ void processPointLight(Shader& shader, std::string lightName, int lightNum, Poin
 	ss1 << lightNum;
 	ss2 << ss0.str() + "[" + ss1.str() + "]";
 
-	shader.setVec3(ss2.str() + ".position", light.mPosition);
+	shader.setVec3(ss2.str() + ".mPosition", light.mPosition);
 	shader.setVec3(ss2.str() + ".mColor", light.mColor);
-	shader.setFloat(ss2.str() + "mIntensity", light.mIntensity);
-	shader.setFloat(ss2.str() + "mRadius", light.mRadius);
+	shader.setFloat(ss2.str() + ".mIntensity", light.mIntensity);
+	shader.setFloat(ss2.str() + ".mRadius", light.mRadius);
 }
 
 void outputMaterialValues(Material material)

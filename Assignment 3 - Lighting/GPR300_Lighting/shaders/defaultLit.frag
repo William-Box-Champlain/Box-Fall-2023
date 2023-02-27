@@ -48,6 +48,10 @@ struct DirLight
     float mIntensity;
 };
 
+vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection);
+
+vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess);
+
 vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection);
 
 vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection);
@@ -69,9 +73,11 @@ void main(){
     vec3 normal = normalize(Normal);
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 
-    vec3 totalLight = CalculateDirectionalLighting(dirLight,normal,viewDirection);
+    vec3 totalLight = vec3(0.0f);
 
-    totalLight += CalculateSpotLight(spotLight, normal, WorldPosition,viewDirection,uEyePosition);
+    //totalLight += CalculateDirectionalLighting(dirLight,normal,viewDirection);
+
+    //totalLight += CalculateSpotLight(spotLight, normal, WorldPosition,viewDirection,uEyePosition);
 
     for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
 
@@ -82,11 +88,11 @@ vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirect
 {
     vec3 ambient = material.mAmbient * light.mIntensity;
 
-    vec3 lightDirection = normalize(-light.mDirection);
-    vec3 diffuse = material.mDiffuse * max(dot(normal,lightDirection),0.0f) * light.mIntensity;
+    vec3 lightDirection = normalize(light.mDirection);
+    vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,lightDirection);
 
     vec3 halfVector = normalize((light.mDirection + cameraDirection));
-    vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * light.mIntensity;
+    vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess) * light.mIntensity;
 
     return light.mColor * (ambient + diffuse + specular);
 }
@@ -100,11 +106,11 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
 
     vec3 ambient = material.mAmbient * attenuatedIntensity;
 
-    vec3 lightDirection = normalize(fragmentPosition - light.mPosition);
-    vec3 diffuse = material.mDiffuse * max(dot(normal,lightDirection),0.0f) * attenuatedIntensity;
+    vec3 lightDirection = -normalize(fragmentPosition - light.mPosition);
+    vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,lightDirection);
 
     vec3 halfVector = normalize((lightDirection + cameraDirection));
-    vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * attenuatedIntensity * light.mIntensity;
+    vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
     return light.mColor * (ambient + diffuse + specular);
 }
@@ -113,25 +119,31 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec
 {
     vec3 temp;
 
-    vec3 DirToFrag = normalize(fragmentPosition - light.mPosition);
+    vec3 DirToFrag = -normalize(fragmentPosition - light.mPosition);
     float costTheta = dot(DirToFrag,normalize(-light.mDirection));
     float theta = acos(costTheta);
 
-    if(theta > light.mMaxAngle)
-    {
-        float angularAttenuation = pow(clamp(((theta - light.mMinAngle)/(light.mMinAngle-light.mMaxAngle)),0.0f,1.0f),2.0f);
-        float dist = distance(fragmentPosition,light.mPosition);
-        float distanceAttenutation = pow(clamp((1-pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
+    float angularAttenuation = pow(clamp(((theta - light.mMinAngle)/(light.mMinAngle-light.mMaxAngle)),0.0f,1.0f),2.0f);
+    float dist = distance(fragmentPosition,light.mPosition);
+    float distanceAttenutation = pow(clamp((1-pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
 
-        vec3 ambient = material.mAmbient * distanceAttenutation * angularAttenuation;
+    vec3 ambient = material.mAmbient * distanceAttenutation * angularAttenuation;
 
-        vec3 diffuse = material.mDiffuse * max(dot(normal,DirToFrag),0.0f) * angularAttenuation * distanceAttenutation;
+    vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,DirToFrag);
 
-        vec3 halfVector = normalize((DirToFrag + cameraDirection));
-        vec3 specular = material.mSpecular * max(dot(normal,halfVector),0.0f) * material.mShininess * angularAttenuation * distanceAttenutation;
+    vec3 halfVector = normalize((DirToFrag + cameraDirection));
+    vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
-        return light.mColor * (ambient + diffuse + specular);
-    }
+    return light.mColor * (ambient + diffuse + specular);
+}
 
-    return vec3(0.0f);
+vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection)
+{
+    return material.mDiffuse * max(dot(normal,lightDirection),0.0f);
+}
+
+vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess)
+{
+    vec3 specular = materialSpecular * max(dot(normal,halfVector),0.0f) * materialShininess;
+    return specular;
 }
