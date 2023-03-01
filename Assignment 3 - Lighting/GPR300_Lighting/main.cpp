@@ -62,15 +62,28 @@ Material material;
 
 DirLight directionalLight;
 
-SpotLight spotLight = { spotLight.mColor = glm::vec3(128, 128, 128),
+float spotLightMinAngleDegrees = float(23.0f);
+float spotLightMaxAngleDegrees = float(25.0f);
+
+SpotLight spotLight =
+{
+	spotLight.mColor = glm::vec3(128, 128, 128),
+	spotLight.mPosition = glm::vec3(0.0f),
 	spotLight.mDirection = glm::vec3(0.0f, -1.0f, 0.0f),
-	spotLight.mIntensity = 1.0f,
+	spotLight.mIntensity = float(1.0f),
 	spotLight.mRadius = float(12.0f),
-	spotLight.mMinAngle = float(12.5f),
-	spotLight.mMaxAngle = float(25.0f) };
+	spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees)),
+	spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees)) 
+};
 
 float pointLightZeroDistance = 1.0f;
 glm::vec3 pointLightDirection = glm::vec3(0.0f);
+
+glm::vec3 orbitalCenter = glm::vec3(0.0f, 5.0f, 0.0f);
+float orbitalRadius = 5;
+float orbitalSpeed = 1;
+
+float pointLightRadius = 5.0f;
 
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
@@ -145,6 +158,8 @@ int main() {
 	ew::Transform planeTransform;
 	ew::Transform cylinderTransform;
 	ew::Transform lightTransform;
+	ew::Transform pointLightTransform[NUMBER_OF_POINTLIGHTS];
+
 
 	cubeTransform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 	sphereTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
@@ -158,9 +173,9 @@ int main() {
 	lightTransform.position = glm::vec3(0.0f, 5.0f, 0.0f);
 
 	//Initialize material values
-	material.mAmbient = glm::vec3(0.75f, 0.75f, 0.75f);
-	material.mDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	material.mSpecular = glm::vec3(0.25f, 0.25f, 0.25f);
+	material.mAmbient = glm::vec3(1.0f, 0.0f, 0.0f);
+	material.mDiffuse = glm::vec3(0.0f, 1.0f, 0.0f);
+	material.mSpecular = glm::vec3(0.0f, 0.0f, 1.0f);
 	material.mShininess = float(1.0f);
 
 	//Initialize directional light values
@@ -176,22 +191,23 @@ int main() {
 	spotLight.mRadius = float(12.0f);
 	spotLight.mMinAngle = float(12.5f);
 	spotLight.mMaxAngle = float(25.0f);
+	spotLight.mFallOff = float(2.0f);
 
 	//Initialize point light values
-	pointLights[0].mColor = glm::vec3(0.5f, 0.0f, 0.0f);
-	pointLights[0].mIntensity = float(0.5f);
-	pointLights[0].mRadius = float(7.0f);
-	pointLights[0].mPosition = glm::vec3(4.0f, 5.0f, 0.0f);
+	pointLights[0].mColor = glm::vec3(1.0f, 0.0f, 0.0f);
+	pointLights[0].mIntensity = float(1.0f);
+	pointLights[0].mRadius = float(9.0f);
+	pointLights[0].mPosition = pointLightTransform[0].position;
 
-	pointLights[1].mColor = glm::vec3(0.0f, 0.0f, 0.0f);
-	pointLights[1].mIntensity = float(0.5f);
-	pointLights[1].mRadius = float(7.0f);
-	pointLights[1].mPosition = glm::vec3(-4.0f, 5.0f, 0.0f);
+	pointLights[1].mColor = glm::vec3(0.0f, 1.0f, 0.0f);
+	pointLights[1].mIntensity = float(1.0f);
+	pointLights[1].mRadius = float(9.0f);
+	pointLights[1].mPosition = pointLightTransform[1].position;
 
-	pointLights[2].mColor = glm::vec3(0.0f, 0.0f, 0.0f);
-	pointLights[2].mIntensity = float(0.5f);
-	pointLights[2].mRadius = float(7.0f);
-	pointLights[2].mPosition = glm::vec3(0.0f, 5.0f, 4.0f);
+	pointLights[2].mColor = glm::vec3(0.0f, 0.0f, 1.0f);
+	pointLights[2].mIntensity = float(1.0f);
+	pointLights[2].mRadius = float(9.0f);
+	pointLights[2].mPosition = pointLightTransform[2].position;
 
 	outputMaterialValues(material);
 	outputDirLightValues(directionalLight);
@@ -217,13 +233,28 @@ int main() {
 		processMaterial(litShader, "material", material);
 
 		//Update Lights
+
 		spotLight.mPosition = lightTransform.position;
+		spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees));
+		spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees));
+
+		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+		{
+			glm::vec3 temp = orbitalCenter;
+			temp.x += glm::cos(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
+			temp.z += glm::sin(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
+			pointLightTransform[i].position = temp;
+		}
+
+		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+		{
+			pointLights[i].mPosition = pointLightTransform[i].position;
+			pointLights[i].mRadius = pointLightRadius;
+		}
+
 		//Process Lights
 		processDirectionalLight(litShader, "dirLight", directionalLight);
 		processSpotLight(litShader, "spotLight", spotLight);
-
-		pointLights[0].mPosition = pointLightZeroDistance * glm::normalize(pointLightDirection);
-
 		litShader.setInt("numberOfPointLights", NUMBER_OF_POINTLIGHTS);
 		for (size_t i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
 		{
@@ -255,23 +286,47 @@ int main() {
 		unlitShader.use();
 		unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
 		unlitShader.setMat4("_View", camera.getViewMatrix());
+
+		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+		{
+			unlitShader.setMat4("_Model", pointLightTransform[i].getModelMatrix());
+			unlitShader.setVec3("_Color", pointLights[i].mColor);
+			sphereMesh.draw();
+		}
+
 		unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
-		unlitShader.setVec3("_Color", lightColor);
+		unlitShader.setVec3("_Color", spotLight.mColor);
 		sphereMesh.draw();
 
 		//Draw UI
-		ImGui::Begin("Settings");
-	
+		ImGui::Begin("Material");
 		ImGui::ColorEdit3("Material Ambient", &material.mAmbient.r);
 		ImGui::ColorEdit3("Material Diffuse", &material.mDiffuse.r);
 		ImGui::ColorEdit3("Material Specular", &material.mSpecular.r);
 		ImGui::DragFloat("Material Shininess", &material.mShininess, 0.01f, 0.0f, 2.0f);
+		ImGui::End();
 
-		ImGui::ColorEdit3("Light Color", &pointLights[0].mColor.r);
-		ImGui::ColorEdit3("Light Direction", &pointLightDirection.r);
-		ImGui::DragFloat("Light Distance", &pointLightZeroDistance, 0.1f, 0.0f, 20.0f);
-		ImGui::DragFloat("Light Radius", &pointLights[0].mRadius, 0.01f, 0.0f, 20.0f);
-		ImGui::DragFloat("Light Intensity", &pointLights[0].mIntensity, 0.01f, 0.0f, 20.0f);
+		ImGui::Begin("Directional Light");
+		ImGui::ColorEdit3("Light Color", &directionalLight.mColor.r);
+		ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r,0.1f,0.0f,1.0f);
+		ImGui::DragFloat("Light Intensity", &directionalLight.mIntensity);
+		ImGui::End();
+
+		ImGui::Begin("Spot Light");
+		ImGui::ColorEdit3("Light Color", &spotLight.mColor.r);
+		ImGui::DragFloat3("Light Direction", &spotLight.mDirection.r, 0.0f, -1.0f, 1.0f);
+		ImGui::DragFloat3("Light Position", &lightTransform.position.x, 0.5f, -5.0f, 5.0f);
+		ImGui::DragFloat("Light Radius", &spotLight.mRadius, 0.5f, 0.0f, 20.0f);
+		ImGui::DragFloat("Light Min Angle", &spotLightMinAngleDegrees, 1.0f, 0.0f, 360.0f);
+		ImGui::DragFloat("Light Max Angle", &spotLightMaxAngleDegrees, 1.0f, 0.0f, 360.0f);
+		ImGui::DragFloat("Light Angular Falloff", &spotLight.mFallOff, 0.1f, 0.1f, 3.0f);
+		ImGui::End();
+
+		ImGui::Begin("Point Lights");
+		ImGui::DragFloat3("Orbital Center", &orbitalCenter.x,1.0f,-5.0f,5.0f);
+		ImGui::DragFloat("Orbital Radius", &orbitalRadius, 1.0f, 1.0f, 10.0f);
+		ImGui::DragFloat("Orbital Speed", &orbitalSpeed, 1.0f, 1.0f, 5.0f);
+		ImGui::DragFloat("Light Radius", &pointLightRadius, 0.5f, 0.0f, 10.0f);
 		ImGui::End();
 
 		ImGui::Render();

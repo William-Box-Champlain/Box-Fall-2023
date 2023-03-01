@@ -24,9 +24,7 @@ struct Material
 struct SpotLight
 {
     glm::vec3 mColor;
-
     glm::vec3 mPosition;
-
     glm::vec3 mDirection;
 
     float mIntensity;
@@ -34,24 +32,21 @@ struct SpotLight
 
     float mMinAngle;
     float mMaxAngle;
+	float mFallOff;
 };
 
 struct PointLight
 {
     glm::vec3 mPosition;
-
     glm::vec3 mColor;
 
     float mIntensity;
-
     float mRadius;
-
 };
 
 struct DirLight
 {
     glm::vec3 mDirection;
-
     glm::vec3 mColor;
 
     float mIntensity;
@@ -88,6 +83,7 @@ void processSpotLight(Shader& shader, std::string lightName, SpotLight light)
 	shader.setFloat(ss0.str() + ".mRadius", light.mRadius);
 	shader.setFloat(ss0.str() + ".mMinAngle", light.mMinAngle);
 	shader.setFloat(ss0.str() + ".mMaxAngle", light.mMaxAngle);
+	shader.setFloat(ss0.str() + ".mFallOff", light.mFallOff);
 	
 }
 

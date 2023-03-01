@@ -25,6 +25,7 @@ struct SpotLight
 
     float mMinAngle;
     float mMaxAngle;
+    float mFallOff;
 };
 
 struct PointLight
@@ -75,9 +76,9 @@ void main(){
 
     vec3 totalLight = vec3(0.0f);
 
-    //totalLight += CalculateDirectionalLighting(dirLight,normal,viewDirection);
+    totalLight += CalculateDirectionalLighting(dirLight,normal,viewDirection);
 
-    //totalLight += CalculateSpotLight(spotLight, normal, WorldPosition,viewDirection,uEyePosition);
+    totalLight += CalculateSpotLight(spotLight, normal, WorldPosition,viewDirection,uEyePosition);
 
     for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
 
@@ -104,7 +105,7 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
     float dist = distance(fragmentPosition,light.mPosition);
     float attenuatedIntensity = pow(clamp((1 - pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
 
-    vec3 ambient = material.mAmbient * attenuatedIntensity;
+    vec3 ambient = material.mAmbient ;
 
     vec3 lightDirection = -normalize(fragmentPosition - light.mPosition);
     vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,lightDirection);
@@ -112,29 +113,33 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
     vec3 halfVector = normalize((lightDirection + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
-    return light.mColor * (ambient + diffuse + specular);
+    return light.mColor * (ambient + diffuse + specular) * attenuatedIntensity;
 }
 
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition)
 {
-    vec3 temp;
-
+    //calculate directionality and theta
     vec3 DirToFrag = -normalize(fragmentPosition - light.mPosition);
-    float costTheta = dot(DirToFrag,normalize(-light.mDirection));
-    float theta = acos(costTheta);
+    //float costTheta = dot(DirToFrag,normalize(-light.mDirection));
+    //float theta = acos(costTheta);
+    float theta = dot(DirToFrag,normalize(-light.mDirection));
+    //calculate angular attentuation
+    float angularAttenuation = pow(clamp(((theta - light.mMinAngle)/(light.mMinAngle-light.mMaxAngle)),0.0f,1.0f),light.mFallOff);
 
-    float angularAttenuation = pow(clamp(((theta - light.mMinAngle)/(light.mMinAngle-light.mMaxAngle)),0.0f,1.0f),2.0f);
+    //calculate distance and distance attenuation
     float dist = distance(fragmentPosition,light.mPosition);
     float distanceAttenutation = pow(clamp((1-pow((dist/light.mRadius),4.0f)),0.0f,1.0f),2.0f);
 
-    vec3 ambient = material.mAmbient * distanceAttenutation * angularAttenuation;
+    //calculate light contributions
+    vec3 ambient = material.mAmbient;
 
     vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,DirToFrag);
 
     vec3 halfVector = normalize((DirToFrag + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
-    return light.mColor * (ambient + diffuse + specular);
+    //combine above calculated values and return
+    return light.mColor * (ambient + diffuse + specular) * distanceAttenutation * angularAttenuation;
 }
 
 vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection)
