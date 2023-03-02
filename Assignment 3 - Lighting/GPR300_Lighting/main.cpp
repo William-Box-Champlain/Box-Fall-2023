@@ -70,12 +70,7 @@ SpotLight spotLight =
 	spotLight.mColor = glm::vec3(128, 128, 128),
 	spotLight.mPosition = glm::vec3(0.0f),
 	spotLight.mDirection = glm::vec3(0.0f, -1.0f, 0.0f),
-<<<<<<< Updated upstream
 	spotLight.mIntensity = float(1.0f),
-=======
-	spotLight.mPosition = glm::vec3(0.0f),
-	spotLight.mIntensity = 1.0f,
->>>>>>> Stashed changes
 	spotLight.mRadius = float(12.0f),
 	spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees)),
 	spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees)) 
@@ -133,17 +128,17 @@ int main() {
 
 	ew::MeshData cubeMeshData;
 	ew::createCube(1.0f, 1.0f, 1.0f, cubeMeshData);
-	//ew::MeshData sphereMeshData;
-	//ew::createSphere(0.5f, 64, sphereMeshData);
-	//ew::MeshData cylinderMeshData;
-	//ew::createCylinder(1.0f, 0.5f, 64, cylinderMeshData);
+	ew::MeshData sphereMeshData;
+	ew::createSphere(0.5f, 64, sphereMeshData);
+	ew::MeshData cylinderMeshData;
+	ew::createCylinder(1.0f, 0.5f, 64, cylinderMeshData);
 	ew::MeshData planeMeshData;
 	ew::createPlane(1.0f, 1.0f, planeMeshData);
 
 	ew::Mesh cubeMesh(&cubeMeshData);
-	//ew::Mesh sphereMesh(&sphereMeshData);
+	ew::Mesh sphereMesh(&sphereMeshData);
 	ew::Mesh planeMesh(&planeMeshData);
-	//ew::Mesh cylinderMesh(&cylinderMeshData);
+	ew::Mesh cylinderMesh(&cylinderMeshData);
 
 	//Enable back face culling
 	glEnable(GL_CULL_FACE);
@@ -277,11 +272,11 @@ int main() {
 
 		//Draw sphere
 		litShader.setMat4("_Model", sphereTransform.getModelMatrix());
-		//sphereMesh.draw();
+		sphereMesh.draw();
 
 		//Draw cylinder
 		litShader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		//cylinderMesh.draw();
+		cylinderMesh.draw();
 
 		//Draw plane
 		litShader.setMat4("_Model", planeTransform.getModelMatrix());
@@ -300,13 +295,8 @@ int main() {
 		}
 
 		unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
-<<<<<<< Updated upstream
 		unlitShader.setVec3("_Color", spotLight.mColor);
 		sphereMesh.draw();
-=======
-		unlitShader.setVec3("_Color", lightColor);
-		//sphereMesh.draw();
->>>>>>> Stashed changes
 
 		//Draw UI
 		ImGui::Begin("Material");
