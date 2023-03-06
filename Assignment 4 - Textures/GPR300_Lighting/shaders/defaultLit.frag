@@ -88,8 +88,10 @@ void main(){
 
     for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
 
-    vec2 noise = texture(uNoise,Uv + uTime).rr * uSampleSize;
-    vec4 color = texture(uTexture,Uv+noise);
+    vec2 scrollingUV = Uv + uTime;
+
+    vec4 noise = texture(uNoise,Uv);
+    vec4 color = texture(uTexture,scrollingUV);
 
     FragColor = color * vec4(totalLight,1.0f);
 }
