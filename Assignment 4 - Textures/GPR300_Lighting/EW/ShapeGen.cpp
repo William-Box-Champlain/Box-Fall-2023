@@ -219,7 +219,7 @@ namespace ew {
 		//VERTICES
 		//Top cap (facing up)
 		//TODO: populate UV data
-		meshData.vertices.push_back(Vertex(glm::vec3(0, halfHeight, 0), glm::vec3(0, 1, 0),glm::vec2(0.5f,0.5f)));
+		meshData.vertices.push_back(Vertex(glm::vec3(0, halfHeight, 0), glm::vec3(0, 1, 0),glm::vec2(0,0)));
 		for (int i = 0; i <= numSegments; i++)
 		{
 			glm::vec3 pos = glm::vec3(

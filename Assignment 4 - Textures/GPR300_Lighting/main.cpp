@@ -91,6 +91,7 @@ static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
 std::string CORRUGATED_STEEL_TEXTURE_FILE_NAME = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_Color.jpg";
+std::string PAVING_STONES_TEXTURE_FILE_NAME = "textures/PavingStones/PavingStones128_1K_Color.jpg";
 std::string NOISE_TEXTURE_FILE_NAME = "textures/noiseTexture.png";
 
 float sampleSize = 0.01f;
