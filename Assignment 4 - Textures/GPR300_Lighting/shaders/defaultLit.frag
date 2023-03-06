@@ -4,6 +4,8 @@ out vec4 FragColor;
 in vec3 WorldPosition;
 in vec3 Normal;
 in vec2 Uv;
+in mat3 TBN;
+
 
 struct Material
 {
@@ -73,11 +75,16 @@ uniform PointLight pointLights[MAX_NUMBER_OF_POINT_LIGHTS];
 
 uniform sampler2D uTexture;
 uniform sampler2D uNoise;
+uniform sampler2D uNormalMap;
 uniform float uTime;
 uniform float uSampleSize;
 
 void main(){
     vec3 normal = normalize(Normal);
+
+    vec3 textureNormal = (texture(uNormalMap,Uv).rgb*2.0f) - 1.0f;
+    textureNormal *= TBN;
+
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 
     vec3 totalLight = vec3(0.0f);
