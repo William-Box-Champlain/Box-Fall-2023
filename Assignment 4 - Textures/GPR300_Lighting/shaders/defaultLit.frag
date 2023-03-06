@@ -3,6 +3,7 @@ out vec4 FragColor;
 
 in vec3 WorldPosition;
 in vec3 Normal;
+in vec2 Uv;
 
 struct Material
 {
@@ -70,6 +71,11 @@ uniform SpotLight spotLight;
 uniform int numberOfPointLights;
 uniform PointLight pointLights[MAX_NUMBER_OF_POINT_LIGHTS];
 
+uniform sampler2D uTexture;
+uniform sampler2D uNoise;
+uniform float uTime;
+uniform float uSampleSize;
+
 void main(){
     vec3 normal = normalize(Normal);
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
@@ -82,7 +88,10 @@ void main(){
 
     for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
 
-    FragColor = vec4(totalLight,1.0f);
+    vec2 noise = texture(uNoise,Uv + uTime).rr * uSampleSize;
+    vec4 color = texture(uTexture,Uv+noise);
+
+    FragColor = color * vec4(totalLight,1.0f);
 }
 
 vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection)

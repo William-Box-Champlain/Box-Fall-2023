@@ -24,6 +24,8 @@
 
 #include "WB/LightStructs.h"
 
+GLuint createTexture(std::string filepath);
+
 void processInput(GLFWwindow* window);
 void resizeFrameBufferCallback(GLFWwindow* window, int width, int height);
 void keyboardCallback(GLFWwindow* window, int keycode, int scancode, int action, int mods);
@@ -88,6 +90,11 @@ float pointLightRadius = 5.0f;
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
+std::string CORRUGATED_STEEL_TEXTURE_FILE_NAME = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_Color.jpg";
+std::string NOISE_TEXTURE_FILE_NAME = "textures/noiseTexture.png";
+
+float sampleSize = 0.01f;
+
 int main() {
 	if (!glfwInit()) {
 		printf("glfw failed to init");
@@ -119,6 +126,16 @@ int main() {
 
 	//Dark UI theme.
 	ImGui::StyleColorsDark();
+
+	GLuint rustTexture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
+
+	//bind textures
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, rustTexture);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_1D, noiseTexture);
 
 	//Used to draw shapes. This is the shader you will be completing.
 	Shader litShader("shaders/defaultLit.vert", "shaders/defaultLit.frag");
@@ -229,11 +246,14 @@ int main() {
 		deltaTime = time - lastFrameTime;
 		lastFrameTime = time;
 
+		//update time
+		litShader.setFloat("uTime", time);
+		litShader.setFloat("uSampleSize", sampleSize);
+
 		//Process material
 		processMaterial(litShader, "material", material);
 
 		//Update Lights
-
 		spotLight.mPosition = lightTransform.position;
 		spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees));
 		spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees));
@@ -263,6 +283,8 @@ int main() {
 
 		//Draw
 		litShader.use();
+		litShader.setInt("uTexture", 0);
+		litShader.setInt("uNoise", 1);
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
@@ -432,4 +454,37 @@ void processInput(GLFWwindow* window) {
 	position += right * getAxis(window, GLFW_KEY_D, GLFW_KEY_A) * moveAmnt;
 	position += up * getAxis(window, GLFW_KEY_Q, GLFW_KEY_E) * moveAmnt;
 	camera.setPosition(position);
+}
+//Author: William Box
+//Creates a texture from an image-file pointed at by filepath
+GLuint createTexture(std::string filepath)
+{
+	//Texture for this project
+	GLuint texture;
+	glGenTextures(1, &texture);
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	//Load texture data from file
+	int width, height, numComponents;
+	unsigned char* textureData = stbi_load(filepath.c_str(), &width, &height, &numComponents, 0);
+
+	if (numComponents < 4)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	//Set texture parameters
+	glTextureParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	stbi_image_free(textureData);
+	return texture;
 }
