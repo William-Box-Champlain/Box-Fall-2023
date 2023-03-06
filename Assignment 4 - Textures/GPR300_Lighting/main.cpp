@@ -135,7 +135,7 @@ int main() {
 	glBindTexture(GL_TEXTURE_2D, rustTexture);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_1D, noiseTexture);
+	glBindTexture(GL_TEXTURE_2D, noiseTexture);
 
 	//Used to draw shapes. This is the shader you will be completing.
 	Shader litShader("shaders/defaultLit.vert", "shaders/defaultLit.frag");
