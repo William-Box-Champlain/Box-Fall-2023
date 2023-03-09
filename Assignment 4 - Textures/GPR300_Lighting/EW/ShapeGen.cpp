@@ -141,6 +141,7 @@ namespace ew {
 		//Angle between segments
 		float thetaStep = (2.0f * glm::pi<float>()) / (float)numSegments;
 		float phiStep = (glm::pi<float>()) / (float)numSegments;
+		float circumference = glm::pi<float>() * 2.0f * radius;
 
 		for (int i = 1; i < numSegments; i++)
 		{
@@ -155,10 +156,15 @@ namespace ew {
 				float y = radius * cosf(phi);
 				float z = radius * sinf(phi) * cosf(theta);
 
+				float xArcLength = theta * radius;
+				float yArcLength = phi * radius;
+
 				glm::vec3 position = glm::vec3(x, y, z);
 				glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
-				float u = glm::atan(z / x);
-				float v = glm::acos(y) / glm::pi<float>();
+
+				float u = xArcLength / circumference;
+				float v = yArcLength / circumference;
+
 				glm::vec2 uv = glm::vec2(u,v);
 				//TODO: calculate proper UV coordinate for vertex i,j
 				meshData.vertices.push_back({ position, normal , uv});
@@ -215,11 +221,12 @@ namespace ew {
 
 		float halfHeight = height * 0.5f;
 		float thetaStep = glm::pi<float>() * 2.0f / numSegments;
+		float circumference = glm::pi<float>() * 2.0f * radius;
 
 		//VERTICES
 		//Top cap (facing up)
 		//TODO: populate UV data
-		meshData.vertices.push_back(Vertex(glm::vec3(0, halfHeight, 0), glm::vec3(0, 1, 0),glm::vec2(0,0)));
+		meshData.vertices.push_back(Vertex(glm::vec3(0, halfHeight, 0), glm::vec3(0, 1, 0),glm::vec2(0.0f,0.0f)));
 		for (int i = 0; i <= numSegments; i++)
 		{
 			glm::vec3 pos = glm::vec3(
@@ -236,7 +243,7 @@ namespace ew {
 
 		//Bottom cap (facing down)
 		//TODO: populate UV data
-		meshData.vertices.push_back(Vertex(glm::vec3(0, -halfHeight, 0), glm::vec3(0, -1, 0),glm::vec2(0.5f,0.5f)));
+		meshData.vertices.push_back(Vertex(glm::vec3(0, -halfHeight, 0), glm::vec3(0, -1, 0),glm::vec2(0.0f,0.0f)));
 		unsigned int bottomCenterIndex = (unsigned int)meshData.vertices.size() - 1;
 		for (int i = 0; i <= numSegments; i++)
 		{
@@ -257,10 +264,11 @@ namespace ew {
 		//Side top ring
 		for (int i = 0; i <= numSegments; i++)
 		{
+			float arcLength = i * thetaStep * radius;
 			glm::vec3 pos = meshData.vertices[i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[0].position));
 			//TODO: populate UV data
-			float u = glm::atan(pos.z,pos.x)/glm::pi<float>();
+			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);
 			meshData.vertices.push_back(Vertex(pos, normal, uv));
@@ -268,10 +276,11 @@ namespace ew {
 		//Side bottom ring
 		for (int i = 0; i <= numSegments; i++)
 		{
+			float arcLength = i * thetaStep * radius;
 			glm::vec3 pos = meshData.vertices[bottomCenterIndex + i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[bottomCenterIndex].position));
 			//TODO: populate UV data
-			float u = glm::atan(pos.z, pos.x) / glm::pi<float>();
+			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);
 			meshData.vertices.push_back(Vertex(pos, normal, uv));
