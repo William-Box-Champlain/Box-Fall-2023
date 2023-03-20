@@ -263,7 +263,7 @@ namespace ew {
 			float arcLength = i * thetaStep * radius;
 			glm::vec3 pos = meshData.vertices[i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[0].position));
-			glm::vec3 tangent = glm::vec3(normal.z, normal.y, -normal.x);
+			glm::vec3 tangent = glm::normalize(cross(normal,glm::vec3(0.0f,1.0f,0.0f)));
 			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);
@@ -275,7 +275,7 @@ namespace ew {
 			float arcLength = i * thetaStep * radius;
 			glm::vec3 pos = meshData.vertices[bottomCenterIndex + i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[bottomCenterIndex].position));
-			glm::vec3 tangent = glm::vec3(normal.z, normal.y, -normal.x);
+			glm::vec3 tangent = glm::normalize(cross(normal, glm::vec3(0.0f, 1.0f, 0.0f)));
 			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);

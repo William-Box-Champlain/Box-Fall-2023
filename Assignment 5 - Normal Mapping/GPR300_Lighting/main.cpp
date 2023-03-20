@@ -130,10 +130,10 @@ int main() {
 	//Dark UI theme.
 	ImGui::StyleColorsDark();
 
-	//GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
-	//GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
-	GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
-	GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
+	GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
+	//GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
+	//GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
 	//bind textures
@@ -155,7 +155,7 @@ int main() {
 	ew::MeshData cubeMeshData;
 	ew::createCube(1.0f, 1.0f, 1.0f, cubeMeshData);
 	ew::MeshData sphereMeshData;
-	ew::createSphere(0.5f, 64, sphereMeshData);
+	ew::createSphere(0.5f, 128, sphereMeshData);
 	ew::MeshData cylinderMeshData;
 	ew::createCylinder(1.0f, 0.5f, 64, cylinderMeshData);
 	ew::MeshData planeMeshData;
