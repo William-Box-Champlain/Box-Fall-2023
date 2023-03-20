@@ -18,7 +18,7 @@ void main()
     //calculate bitangent
     vec3 T = normalize(vec3(_Model * vec4(vTangent,0.0)));
     vec3 N = normalize(vec3(_Model * vec4(vNormal,0.0)));
-    vec3 B = cross(N,T);
+    vec3 B = normalize(cross(N,T));
     //create TBN matrix
     TBN = mat3(T,B,N);
 

@@ -83,22 +83,22 @@ void main(){
     vec3 normal = normalize(Normal);
 
     vec3 textureNormal = (texture(uNormalMap,Uv).rgb*2.0f) - 1.0f;
-    textureNormal *= TBN;
+    //textureNormal *= TBN;
 
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 
     vec3 totalLight = vec3(0.0f);
 
-    totalLight += CalculateDirectionalLighting(dirLight,normal,viewDirection);
+    totalLight += CalculateDirectionalLighting(dirLight,textureNormal,viewDirection);
 
-    totalLight += CalculateSpotLight(spotLight, normal, WorldPosition,viewDirection,uEyePosition);
+    totalLight += CalculateSpotLight(spotLight, textureNormal, WorldPosition,viewDirection,uEyePosition);
 
-    for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,WorldPosition,viewDirection);
+    for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],textureNormal,WorldPosition,viewDirection);
 
     //vec2 scrollingUV = Uv + uTime;
     vec2 scrollingUV = vec2(1.0f,1.0f);
     vec2 noise = texture(uNoise,scrollingUV).rr * uSampleSize;
-    vec4 color = texture(uNormalMap,Uv+noise);
+    vec4 color = texture(uTexture,Uv+noise);
 
     FragColor = color * vec4(totalLight,1.0f);
 }
