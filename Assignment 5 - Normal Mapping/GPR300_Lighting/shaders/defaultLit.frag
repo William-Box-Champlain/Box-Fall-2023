@@ -1,14 +1,11 @@
 #version 450                          
 out vec4 FragColor;
 
+in vec3 WorldPosition;
+in vec3 Normal;
 in vec2 Uv;
 in mat3 TBN;
 
-in struct WorldVertex
-{
-    vec3 mWorldPosition;
-    vec3 mWorldNormal;
-} vertex;
 
 struct Material
 {
@@ -83,26 +80,25 @@ uniform float uTime;
 uniform float uSampleSize;
 
 void main(){
-    vec3 normal = normalize(vertex.mWorldNormal);
+    vec3 normal = normalize(Normal);
 
-    //Normal Mapping
-    vec3 textureNormal = (texture(uNormalMap,Uv).rgb*2.0f) - 1.0f;
-    textureNormal *= TBN;
+    vec3 textureNormal = texture(uNormalMap,Uv).rgb;
+    textureNormal = (textureNormal*2.0f) - 1.0f;
+    textureNormal = normalize(textureNormal * TBN);
 
-    //Lighting Stuff
-    vec3 viewDirection = normalize(uEyePosition - vertex.mWorldPosition);
+    vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 
     vec3 totalLight = vec3(0.0f);
 
-    totalLight += CalculateDirectionalLighting(dirLight,normal,viewDirection);
+    totalLight += CalculateDirectionalLighting(dirLight,textureNormal,viewDirection);
 
-    totalLight += CalculateSpotLight(spotLight, normal, vertex.mWorldPosition,viewDirection,uEyePosition);
+    totalLight += CalculateSpotLight(spotLight, textureNormal, WorldPosition,viewDirection,uEyePosition);
 
-    for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],normal,vertex.mWorldPosition,viewDirection);
-    
-    //Noise Texture Stuff
-    vec2 scrollingUV = Uv + uTime;
-    vec2 noise = texture(uNoise,Uv + uTime).rr * uSampleSize;
+    for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],textureNormal,WorldPosition,viewDirection);
+
+    //vec2 scrollingUV = Uv + uTime;
+    vec2 scrollingUV = vec2(1.0f,1.0f);
+    vec2 noise = texture(uNoise,scrollingUV).rr * uSampleSize;
     vec4 color = texture(uTexture,Uv+noise);
 
     FragColor = color * vec4(totalLight,1.0f);
@@ -172,6 +168,6 @@ vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection)
 
 vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess)
 {
-    vec3 specular = materialSpecular * pow(max(dot(normal,halfVector),0.0f),materialShininess);
+    vec3 specular = materialSpecular * max(dot(normal,halfVector),0.0f) * materialShininess;
     return specular;
 }

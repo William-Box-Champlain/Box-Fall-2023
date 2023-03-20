@@ -90,10 +90,10 @@ float pointLightRadius = 5.0f;
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
-std::string CORRUGATED_STEEL_FILE_PATH = "textures/CorrugatedSteel/";
-std::string CORRUGATED_STEEL_TEXTURE = "CorrugatedSteel007C_1K_Color.jpg";
-std::string CORRUGATED_STEEL_NORMAL_MAP = "CorrugatedSteel007C_1K_NormalGL.jpg";
+std::string CORRUGATED_STEEL_TEXTURE_FILE_NAME = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_Color.jpg";
+std::string CORRUGATED_STEEL_NORMAL_MAP = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_NormalGL.jpg";
 std::string PAVING_STONES_TEXTURE_FILE_NAME = "textures/PavingStones/PavingStones128_1K_Color.jpg";
+std::string PAVING_STONES_NORMAL_MAP = "textures/PavingStones/PavingStones128_1K_NormalGL.jpg";
 std::string NOISE_TEXTURE_FILE_NAME = "textures/noiseTexture.png";
 
 float sampleSize = 0.01f;
@@ -130,14 +130,20 @@ int main() {
 	//Dark UI theme.
 	ImGui::StyleColorsDark();
 
-	GLuint rustTexture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	//GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	//GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
+	GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
+	GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
 	//bind textures
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, rustTexture);
+	glBindTexture(GL_TEXTURE_2D, Texture);
 
 	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, NormalMap);
+
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, noiseTexture);
 
 	//Used to draw shapes. This is the shader you will be completing.
@@ -229,13 +235,6 @@ int main() {
 	pointLights[2].mRadius = float(9.0f);
 	pointLights[2].mPosition = pointLightTransform[2].position;
 
-	outputMaterialValues(material);
-	outputDirLightValues(directionalLight);
-	outputSpotLightValues(spotLight);
-	outputPointLightValues(pointLights[0]);
-	outputPointLightValues(pointLights[1]);
-	outputPointLightValues(pointLights[2]);
-
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
 		glClearColor(bgColor.r,bgColor.g,bgColor.b, 1.0f);
@@ -287,7 +286,8 @@ int main() {
 		//Draw
 		litShader.use();
 		litShader.setInt("uTexture", 0);
-		litShader.setInt("uNoise", 1);
+		litShader.setInt("uNormalMap", 1);
+		litShader.setInt("uNoise", 2);
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
