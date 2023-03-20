@@ -82,8 +82,9 @@ uniform float uSampleSize;
 void main(){
     vec3 normal = normalize(Normal);
 
-    vec3 textureNormal = (texture(uNormalMap,Uv).rgb*2.0f) - 1.0f;
-    //textureNormal *= TBN;
+    vec3 textureNormal = texture(uNormalMap,Uv).rgb;
+    textureNormal = (textureNormal*2.0f) - 1.0f;
+    textureNormal = normalize(textureNormal * TBN);
 
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 

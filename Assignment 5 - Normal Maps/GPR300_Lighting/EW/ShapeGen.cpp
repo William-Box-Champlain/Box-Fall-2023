@@ -162,7 +162,7 @@ namespace ew {
 				glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
 
 				//TODO: Calculate proper tangent direction
-				glm::vec3 tangent = glm::vec3(z, y, -x);
+				glm::vec3 tangent = glm::normalize(glm::cross(normal,glm::vec3(0.0f,1.0f,0.0f)));
 
 				float u = xArcLength / circumference;
 				float v = yArcLength / circumference;
