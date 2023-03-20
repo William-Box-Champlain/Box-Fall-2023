@@ -134,7 +134,6 @@ namespace ew {
 
 		float topY = radius;
 		float bottomY = -radius;
-		//TODO: write proper UV coordinate for the top vertex
 		unsigned int topIndex = 0;
 		meshData.vertices.push_back({ glm::vec3(0,topY,0),glm::vec3(0,1,0), glm::vec3(1,0,0), glm::vec2(0.5f,0.5f)});
 
@@ -161,17 +160,17 @@ namespace ew {
 
 				glm::vec3 position = glm::vec3(x, y, z);
 				glm::vec3 normal = glm::normalize(glm::vec3(x, y, z));
+
+				//TODO: Calculate proper tangent direction
 				glm::vec3 tangent = glm::vec3(z, y, -x);
 
 				float u = xArcLength / circumference;
 				float v = yArcLength / circumference;
 
 				glm::vec2 uv = glm::vec2(u,v);
-				//TODO: calculate proper UV coordinate for vertex i,j
 				meshData.vertices.push_back({ position, normal , tangent , uv});
 			}
 		}
-		//TODO: write proper UV coord for the bottom vertex
 		meshData.vertices.push_back({ glm::vec3(0,bottomY,0), glm::vec3(0,-1,0), glm::vec3(-1,0,0), glm::vec2(0.5f,0.5f) });
 		unsigned int bottomIndex = (unsigned int)meshData.vertices.size() - 1;
 		unsigned int ringVertexCount = numSegments + 1;
@@ -226,7 +225,6 @@ namespace ew {
 
 		//VERTICES
 		//Top cap (facing up)
-		//TODO: populate UV data
 		meshData.vertices.push_back(Vertex(glm::vec3(0, halfHeight, 0), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0),glm::vec2(0.0f,0.0f)));
 		for (int i = 0; i <= numSegments; i++)
 		{
@@ -238,12 +236,10 @@ namespace ew {
 			float u = cos(i * thetaStep);
 			float v = sin(i * thetaStep);
 			glm::vec2 uv = glm::vec2(u, v);
-			//TODO: populate UV data
 			meshData.vertices.push_back(Vertex(pos, glm::vec3(0, 1, 0), glm::vec3(1, 0, 0),uv));
 		}
 
 		//Bottom cap (facing down)
-		//TODO: populate UV data
 		meshData.vertices.push_back(Vertex(glm::vec3(0, -halfHeight, 0), glm::vec3(0, -1, 0), glm::vec3(1, 0, 0),glm::vec2(0.0f,0.0f)));
 		unsigned int bottomCenterIndex = (unsigned int)meshData.vertices.size() - 1;
 		for (int i = 0; i <= numSegments; i++)
@@ -256,7 +252,6 @@ namespace ew {
 			float u = cos(i * thetaStep);
 			float v = sin(i * thetaStep);
 			glm::vec2 uv = glm::vec2(u, v);
-			//TODO: populate UV data
 			meshData.vertices.push_back(Vertex(pos, glm::vec3(0, -1, 0), glm::vec3(1, 0, 0),uv));
 		}
 
@@ -269,7 +264,6 @@ namespace ew {
 			glm::vec3 pos = meshData.vertices[i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[0].position));
 			glm::vec3 tangent = glm::vec3(normal.z, normal.y, -normal.x);
-			//TODO: populate UV data
 			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);
@@ -282,7 +276,6 @@ namespace ew {
 			glm::vec3 pos = meshData.vertices[bottomCenterIndex + i + 1].position;
 			glm::vec3 normal = glm::normalize((pos - meshData.vertices[bottomCenterIndex].position));
 			glm::vec3 tangent = glm::vec3(normal.z, normal.y, -normal.x);
-			//TODO: populate UV data
 			float u = arcLength/ circumference;
 			float v = pos.y;
 			glm::vec2 uv = glm::vec2(u, v);
