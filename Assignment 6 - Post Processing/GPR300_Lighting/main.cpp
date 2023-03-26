@@ -25,6 +25,7 @@
 #include "WB/LightStructs.h"
 
 GLuint createTexture(std::string filepath);
+void createColorBuffer(GLuint &colorBuffer);
 
 void processInput(GLFWwindow* window);
 void resizeFrameBufferCallback(GLFWwindow* window, int width, int height);
@@ -152,6 +153,7 @@ int main() {
 	//Used to draw light sphere
 	Shader unlitShader("shaders/defaultLit.vert", "shaders/unlit.frag");
 
+	//Objects to render in scene
 	ew::MeshData cubeMeshData;
 	ew::createCube(1.0f, 1.0f, 1.0f, cubeMeshData);
 	ew::MeshData sphereMeshData;
@@ -236,12 +238,31 @@ int main() {
 	pointLights[2].mPosition = pointLightTransform[2].position;
 
 	//FBO Stuff
-	//Create
+	//Create and Bind
 	unsigned int fbo;
-
 	glGenFramebuffers(1, &fbo);
-	//Bind
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	//Create Color Attachemnt for FBO
+	GLuint colorBuffer;
+	createColorBuffer(colorBuffer);
+
+	//Create Depth Buffer
+	GLuint depthBuffer;
+	glGenRenderbuffers(1, &depthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "Framebuffer is not complete" << std::endl;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	//Create Quad to do Post-Processing on
+	ew::MeshData postProcessingQuadData;
+	ew::createPlane(1.0f, 1.0f, postProcessingQuadData);
+	ew::Mesh postProcessingQuadMesh(&postProcessingQuadData);
 
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
@@ -498,4 +519,22 @@ GLuint createTexture(std::string filepath)
 
 	stbi_image_free(textureData);
 	return texture;
+}
+//Author: William Box
+//Creates a null texture for use in post-processing effects
+void createColorBuffer(GLuint &colorBuffer)
+{
+	glGenTextures(1, &colorBuffer);
+
+	glBindTexture(GL_TEXTURE_2D, colorBuffer);
+
+	//Load texture data from file
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+	//Set texture parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
 }
