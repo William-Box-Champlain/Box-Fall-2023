@@ -131,6 +131,7 @@ int main() {
 	//Dark UI theme.
 	ImGui::StyleColorsDark();
 
+	//Create Textures
 	GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
 	GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
 	//GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
@@ -152,6 +153,9 @@ int main() {
 
 	//Used to draw light sphere
 	Shader unlitShader("shaders/defaultLit.vert", "shaders/unlit.frag");
+
+	//Used for Post-Processing
+	Shader screenShader("shaders/screenShader.vert", "shaders/screenShader.frag");
 
 	//Objects to render in scene
 	ew::MeshData cubeMeshData;
@@ -239,35 +243,39 @@ int main() {
 
 	//FBO Stuff
 	//Create and Bind
-	unsigned int fbo;
+	GLuint fbo;
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
 	//Create Color Attachemnt for FBO
 	GLuint colorBuffer;
-	createColorBuffer(colorBuffer);
-
+	glGenTextures(1, &colorBuffer);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, colorBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
 	//Create Depth Buffer
 	GLuint depthBuffer;
 	glGenRenderbuffers(1, &depthBuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+	//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer is not complete" << std::endl;
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
 	//Create Quad to do Post-Processing on
 	ew::MeshData postProcessingQuadData;
-	ew::createPlane(1.0f, 1.0f, postProcessingQuadData);
+	ew::createQuad(1.0f, 1.0f, postProcessingQuadData);
 	ew::Mesh postProcessingQuadMesh(&postProcessingQuadData);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	//Draw Loop
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
-		glClearColor(bgColor.r,bgColor.g,bgColor.b, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -312,7 +320,14 @@ int main() {
 			processPointLight(litShader, "pointLights", i, pointLights[i]);
 		}
 
-		//Draw
+		//Draw first pass
+		//Bind fbo
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		//Clear fbo before drawing
+		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//Draw contents of scene
 		litShader.use();
 		litShader.setInt("uTexture", 0);
 		litShader.setInt("uNormalMap", 1);
@@ -351,6 +366,68 @@ int main() {
 		unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
 		unlitShader.setVec3("_Color", spotLight.mColor);
 		sphereMesh.draw();
+
+		////Draw second pass
+		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		////Clear buffer before drawing
+		//glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
+		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		////Draw contents of scene
+		//litShader.use();
+		//litShader.setInt("uTexture", 0);
+		//litShader.setInt("uNormalMap", 1);
+		//litShader.setInt("uNoise", 2);
+		//litShader.setMat4("_Projection", camera.getProjectionMatrix());
+		//litShader.setMat4("_View", camera.getViewMatrix());
+		//litShader.setVec3("_LightPos", lightTransform.position);
+		////Draw cube
+		//litShader.setMat4("_Model", cubeTransform.getModelMatrix());
+		//cubeMesh.draw();
+
+		////Draw sphere
+		//litShader.setMat4("_Model", sphereTransform.getModelMatrix());
+		//sphereMesh.draw();
+
+		////Draw cylinder
+		//litShader.setMat4("_Model", cylinderTransform.getModelMatrix());
+		//cylinderMesh.draw();
+
+		////Draw plane
+		//litShader.setMat4("_Model", planeTransform.getModelMatrix());
+		//planeMesh.draw();
+
+		////Draw light as a small sphere using unlit shader, ironically.
+		//unlitShader.use();
+		//unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
+		//unlitShader.setMat4("_View", camera.getViewMatrix());
+
+		//for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+		//{
+		//	unlitShader.setMat4("_Model", pointLightTransform[i].getModelMatrix());
+		//	unlitShader.setVec3("_Color", pointLights[i].mColor);
+		//	sphereMesh.draw();
+		//}
+
+		//unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
+		//unlitShader.setVec3("_Color", spotLight.mColor);
+		//sphereMesh.draw();
+
+		//Apply Post-Processing Effects to screen-space
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//glDisable(GL_DEPTH_TEST);
+
+		//use effects shader
+		screenShader.use();
+		screenShader.setInt("uScreenTexture", 3);
+		glBindTexture(GL_TEXTURE_2D, colorBuffer);
+		postProcessingQuadMesh.draw();
+
+		//Swap buffers
+		//glfwSwapBuffers(window);
 
 		//Draw UI
 		ImGui::Begin("Material");
