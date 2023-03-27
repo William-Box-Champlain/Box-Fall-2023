@@ -7,14 +7,16 @@ uniform sampler2D uScreenTexture;
 uniform int uEffect;
 uniform vec2 uOffsetDistance;
 
+const float offset = 1.0 / 300.0;
+
 void main()
 {
 	vec3 totalcolor = vec3(0.0);
 
 	vec2 offsets[9] = vec2[](
-    vec2(-1,1), vec2(0,1), vec2(1,1),
-    vec2(-1,0), vec2(0,0), vec2(1,0),
-    vec2(-1,-1),vec2(0,-1),vec2(1,-1)
+    vec2(-offset,offset), vec2(0,offset), vec2(offset,offset),
+    vec2(-offset,0), vec2(0,0), vec2(offset,0),
+    vec2(-offset,-offset),vec2(0,-offset),vec2(offset,-offset)
 	);
 
 	mat3 kernal;
