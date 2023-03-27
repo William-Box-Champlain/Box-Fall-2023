@@ -261,17 +261,23 @@ int main() {
 	glGenRenderbuffers(1, &depthBuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-	//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer is not complete" << std::endl;
 
 	//Create Quad to do Post-Processing on
 	ew::MeshData postProcessingQuadData;
-	ew::createQuad(1.0f, 1.0f, postProcessingQuadData);
+	ew::createQuad(2.0f, 2.0f, postProcessingQuadData);
 	ew::Mesh postProcessingQuadMesh(&postProcessingQuadData);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	const char* effectNames[4] = {
+	"None", "Gaussian Blur", "Sharpen", "Edge Detection"
+	};
+	int effectIndex = 0;
+	glm::vec2 effectIntensity = glm::vec2(1.0f,1.0f);
 
 	//Draw Loop
 	while (!glfwWindowShouldClose(window)) {
@@ -367,52 +373,6 @@ int main() {
 		unlitShader.setVec3("_Color", spotLight.mColor);
 		sphereMesh.draw();
 
-		////Draw second pass
-		//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		////Clear buffer before drawing
-		//glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
-		//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		////Draw contents of scene
-		//litShader.use();
-		//litShader.setInt("uTexture", 0);
-		//litShader.setInt("uNormalMap", 1);
-		//litShader.setInt("uNoise", 2);
-		//litShader.setMat4("_Projection", camera.getProjectionMatrix());
-		//litShader.setMat4("_View", camera.getViewMatrix());
-		//litShader.setVec3("_LightPos", lightTransform.position);
-		////Draw cube
-		//litShader.setMat4("_Model", cubeTransform.getModelMatrix());
-		//cubeMesh.draw();
-
-		////Draw sphere
-		//litShader.setMat4("_Model", sphereTransform.getModelMatrix());
-		//sphereMesh.draw();
-
-		////Draw cylinder
-		//litShader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		//cylinderMesh.draw();
-
-		////Draw plane
-		//litShader.setMat4("_Model", planeTransform.getModelMatrix());
-		//planeMesh.draw();
-
-		////Draw light as a small sphere using unlit shader, ironically.
-		//unlitShader.use();
-		//unlitShader.setMat4("_Projection", camera.getProjectionMatrix());
-		//unlitShader.setMat4("_View", camera.getViewMatrix());
-
-		//for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
-		//{
-		//	unlitShader.setMat4("_Model", pointLightTransform[i].getModelMatrix());
-		//	unlitShader.setVec3("_Color", pointLights[i].mColor);
-		//	sphereMesh.draw();
-		//}
-
-		//unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
-		//unlitShader.setVec3("_Color", spotLight.mColor);
-		//sphereMesh.draw();
-
 		//Apply Post-Processing Effects to screen-space
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
@@ -423,11 +383,10 @@ int main() {
 		//use effects shader
 		screenShader.use();
 		screenShader.setInt("uScreenTexture", 3);
+		screenShader.setInt("uEffect", effectIndex);
+		screenShader.setVec2("uOffsetDistance", effectIntensity);
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
 		postProcessingQuadMesh.draw();
-
-		//Swap buffers
-		//glfwSwapBuffers(window);
 
 		//Draw UI
 		ImGui::Begin("Material");
@@ -458,6 +417,11 @@ int main() {
 		ImGui::DragFloat("Orbital Radius", &orbitalRadius, 1.0f, 1.0f, 10.0f);
 		ImGui::DragFloat("Orbital Speed", &orbitalSpeed, 1.0f, 1.0f, 5.0f);
 		ImGui::DragFloat("Light Radius", &pointLightRadius, 0.5f, 0.0f, 10.0f);
+		ImGui::End();
+
+		ImGui::Begin("Post-Processing");
+		ImGui::Combo("Effect", &effectIndex, effectNames, IM_ARRAYSIZE(effectNames));
+		ImGui::DragFloat2("Effect Intensity", &effectIntensity.r,0.1f,0.1f,8.0f);
 		ImGui::End();
 
 		ImGui::Render();
