@@ -26,6 +26,7 @@
 
 GLuint createTexture(std::string filepath);
 void createColorBuffer(GLuint &colorBuffer);
+GLuint createDepthBuffer();
 
 void processInput(GLFWwindow* window);
 void resizeFrameBufferCallback(GLFWwindow* window, int width, int height);
@@ -578,4 +579,45 @@ void createColorBuffer(GLuint &colorBuffer)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+}
+//Author: William Box
+//Creates a buffer with a depth buffer cast to a texture
+GLuint createDepthBuffer()
+{
+	//FBO Stuff
+	//Create and Bind
+	GLuint fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	//generate and bind depth buffer
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, fbo, 0);
+
+	//swap back to default frame buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	return fbo;
+}
+
+//Author: William Box
+GLuint createDepthOnlyBuffer()
+{
+	//FBO Stuff
+	//Create and Bind
+	GLuint fbo;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	//Create Depth Buffer
+	GLuint depthBuffer;
+	glGenRenderbuffers(1, &depthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+
+	return fbo;
 }
