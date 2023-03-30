@@ -84,7 +84,7 @@ void main(){
 
     vec3 textureNormal = texture(uNormalMap,Uv).rgb;
     textureNormal = (textureNormal*2.0f) - 1.0f;
-    textureNormal = normalize(textureNormal * TBN);
+    textureNormal = normalize(TBN * textureNormal);
 
     vec3 viewDirection = normalize(uEyePosition - WorldPosition);
 
@@ -138,7 +138,7 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
 vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition)
 {
     //calculate directionality and theta
-    vec3 DirToFrag = -normalize(fragmentPosition - light.mPosition);
+    vec3 DirToFrag = normalize(light.mPosition - fragmentPosition);
     //float costTheta = dot(DirToFrag,normalize(-light.mDirection));
     //float theta = acos(costTheta);
     float theta = dot(DirToFrag,normalize(-light.mDirection));
