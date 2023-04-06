@@ -27,6 +27,7 @@
 GLuint createTexture(std::string filepath);
 void createColorBuffer(GLuint &colorBuffer);
 GLuint createDepthBuffer();
+GLuint createDepthMap(glm::vec2 shadowResolution);
 
 void processInput(GLFWwindow* window);
 void resizeFrameBufferCallback(GLFWwindow* window, int width, int height);
@@ -34,6 +35,8 @@ void keyboardCallback(GLFWwindow* window, int keycode, int scancode, int action,
 void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void mousePosCallback(GLFWwindow* window, double xpos, double ypos);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
+
+//void drawUI(Material material, DirLight directionalLight, SpotLight spotLight, ew::Transform lightTransform, glm::vec3 orbitalCenter, int effectIndex, glm::vec2 effectIntensity);
 
 float lastFrameTime;
 float deltaTime;
@@ -92,6 +95,8 @@ float pointLightRadius = 5.0f;
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
+glm::vec2 SHADOW_RESOLUTION = glm::vec2(1024, 1024);
+
 std::string CORRUGATED_STEEL_TEXTURE_FILE_NAME = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_Color.jpg";
 std::string CORRUGATED_STEEL_NORMAL_MAP = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_NormalGL.jpg";
 std::string PAVING_STONES_TEXTURE_FILE_NAME = "textures/PavingStones/PavingStones128_1K_Color.jpg";
@@ -99,6 +104,11 @@ std::string PAVING_STONES_NORMAL_MAP = "textures/PavingStones/PavingStones128_1K
 std::string NOISE_TEXTURE_FILE_NAME = "textures/noiseTexture.png";
 
 float sampleSize = 0.01f;
+
+const char* effectNames[4] = {
+	"None", "Gaussian Blur", "Sharpen", "Edge Detection"
+};
+int effectIndex = 0;
 
 int main() {
 	if (!glfwInit()) {
@@ -229,18 +239,10 @@ int main() {
 	//Initialize point light values
 	pointLights[0].mColor = glm::vec3(1.0f, 0.0f, 0.0f);
 	pointLights[0].mIntensity = float(1.0f);
-	pointLights[0].mRadius = float(9.0f);
-	pointLights[0].mPosition = pointLightTransform[0].position;
-
 	pointLights[1].mColor = glm::vec3(0.0f, 1.0f, 0.0f);
 	pointLights[1].mIntensity = float(1.0f);
-	pointLights[1].mRadius = float(9.0f);
-	pointLights[1].mPosition = pointLightTransform[1].position;
-
 	pointLights[2].mColor = glm::vec3(0.0f, 0.0f, 1.0f);
 	pointLights[2].mIntensity = float(1.0f);
-	pointLights[2].mRadius = float(9.0f);
-	pointLights[2].mPosition = pointLightTransform[2].position;
 
 	//FBO Stuff
 	//Create and Bind
@@ -274,10 +276,8 @@ int main() {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	const char* effectNames[4] = {
-	"None", "Gaussian Blur", "Sharpen", "Edge Detection"
-	};
-	int effectIndex = 0;
+	GLuint shadowMap = createDepthMap(SHADOW_RESOLUTION);
+
 	glm::vec2 effectIntensity = glm::vec2(1.0f,1.0f);
 
 	//Draw Loop
@@ -326,11 +326,19 @@ int main() {
 		{
 			processPointLight(litShader, "pointLights", i, pointLights[i]);
 		}
+		//Draw first Pass
+		//Bind shadow-map
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap);
+		//clear viewport
+		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		//Render from directional light's perspective
 
-		//Draw first pass
+
+		//Draw second pass
 		//Bind fbo
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		//Clear fbo before drawing
+		//Clear viewport
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -374,8 +382,10 @@ int main() {
 		unlitShader.setVec3("_Color", spotLight.mColor);
 		sphereMesh.draw();
 
+		//Draw Third Pass / apply Screen-Shader Effects
 		//Apply Post-Processing Effects to screen-space
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -387,9 +397,11 @@ int main() {
 		screenShader.setInt("uEffect", effectIndex);
 		screenShader.setVec2("uOffsetDistance", effectIntensity);
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
+
+		//draw the PP-Quad with the new colorBuffer texture
 		postProcessingQuadMesh.draw();
 
-		//Draw UI
+		//IMGui Stuff
 		ImGui::Begin("Material");
 		ImGui::ColorEdit3("Material Ambient", &material.mAmbient.r);
 		ImGui::ColorEdit3("Material Diffuse", &material.mDiffuse.r);
@@ -399,7 +411,7 @@ int main() {
 
 		ImGui::Begin("Directional Light");
 		ImGui::ColorEdit3("Light Color", &directionalLight.mColor.r);
-		ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r,0.1f,0.0f,1.0f);
+		ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r, 0.1f, 0.0f, 1.0f);
 		ImGui::DragFloat("Light Intensity", &directionalLight.mIntensity);
 		ImGui::End();
 
@@ -414,7 +426,7 @@ int main() {
 		ImGui::End();
 
 		ImGui::Begin("Point Lights");
-		ImGui::DragFloat3("Orbital Center", &orbitalCenter.x,1.0f,-5.0f,5.0f);
+		ImGui::DragFloat3("Orbital Center", &orbitalCenter.x, 1.0f, -5.0f, 5.0f);
 		ImGui::DragFloat("Orbital Radius", &orbitalRadius, 1.0f, 1.0f, 10.0f);
 		ImGui::DragFloat("Orbital Speed", &orbitalSpeed, 1.0f, 1.0f, 5.0f);
 		ImGui::DragFloat("Light Radius", &pointLightRadius, 0.5f, 0.0f, 10.0f);
@@ -422,11 +434,13 @@ int main() {
 
 		ImGui::Begin("Post-Processing");
 		ImGui::Combo("Effect", &effectIndex, effectNames, IM_ARRAYSIZE(effectNames));
-		ImGui::DragFloat2("Effect Intensity", &effectIntensity.r,0.1f,0.1f,8.0f);
+		ImGui::DragFloat2("Effect Radius", &effectIntensity.r, 0.1f, 0.1f, 8.0f);
 		ImGui::End();
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		//drawUI(material, directionalLight, spotLight, lightTransform, orbitalCenter, effectIndex, effectIntensity);
+
 		glfwPollEvents();
 
 		glfwSwapBuffers(window);
@@ -601,7 +615,7 @@ GLuint createDepthBuffer()
 }
 
 //Author: William Box
-GLuint createDepthOnlyBuffer()
+GLuint createDepthMap(glm::vec2 shadowResolution)
 {
 	//FBO Stuff
 	//Create and Bind
@@ -609,15 +623,64 @@ GLuint createDepthOnlyBuffer()
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+	//create texture using depth buffer
+	GLuint depthMap;
+	glGenTextures(1, &depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowResolution.x, shadowResolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	//attach depth texture to depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
-
-	//Create Depth Buffer
-	GLuint depthBuffer;
-	glGenRenderbuffers(1, &depthBuffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return fbo;
 }
+
+//Author: William Box
+//void drawUI(Material material, DirLight directionalLight,SpotLight spotLight, ew::Transform lightTransform, glm::vec3 orbitalCenter, int effectIndex, glm::vec2 effectIntensity)
+//{
+//	//Draw UI
+//	ImGui::Begin("Material");
+//	ImGui::ColorEdit3("Material Ambient", &material.mAmbient.r);
+//	ImGui::ColorEdit3("Material Diffuse", &material.mDiffuse.r);
+//	ImGui::ColorEdit3("Material Specular", &material.mSpecular.r);
+//	ImGui::DragFloat("Material Shininess", &material.mShininess, 0.01f, 0.0f, 2.0f);
+//	ImGui::End();
+//
+//	ImGui::Begin("Directional Light");
+//	ImGui::ColorEdit3("Light Color", &directionalLight.mColor.r);
+//	ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r, 0.1f, 0.0f, 1.0f);
+//	ImGui::DragFloat("Light Intensity", &directionalLight.mIntensity);
+//	ImGui::End();
+//
+//	ImGui::Begin("Spot Light");
+//	ImGui::ColorEdit3("Light Color", &spotLight.mColor.r);
+//	ImGui::DragFloat3("Light Direction", &spotLight.mDirection.r, 0.0f, -1.0f, 1.0f);
+//	ImGui::DragFloat3("Light Position", &lightTransform.position.x, 0.5f, -5.0f, 5.0f);
+//	ImGui::DragFloat("Light Radius", &spotLight.mRadius, 0.5f, 0.0f, 20.0f);
+//	ImGui::DragFloat("Light Min Angle", &spotLightMinAngleDegrees, 1.0f, 0.0f, 360.0f);
+//	ImGui::DragFloat("Light Max Angle", &spotLightMaxAngleDegrees, 1.0f, 0.0f, 360.0f);
+//	ImGui::DragFloat("Light Angular Falloff", &spotLight.mFallOff, 0.1f, 0.1f, 3.0f);
+//	ImGui::End();
+//
+//	ImGui::Begin("Point Lights");
+//	ImGui::DragFloat3("Orbital Center", &orbitalCenter.x, 1.0f, -5.0f, 5.0f);
+//	ImGui::DragFloat("Orbital Radius", &orbitalRadius, 1.0f, 1.0f, 10.0f);
+//	ImGui::DragFloat("Orbital Speed", &orbitalSpeed, 1.0f, 1.0f, 5.0f);
+//	ImGui::DragFloat("Light Radius", &pointLightRadius, 0.5f, 0.0f, 10.0f);
+//	ImGui::End();
+//
+//	ImGui::Begin("Post-Processing");
+//	ImGui::Combo("Effect", &effectIndex, effectNames, IM_ARRAYSIZE(effectNames));
+//	ImGui::DragFloat2("Effect Intensity", &effectIntensity.r, 0.1f, 0.1f, 8.0f);
+//	ImGui::End();
+//
+//	ImGui::Render();
+//	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+//}
