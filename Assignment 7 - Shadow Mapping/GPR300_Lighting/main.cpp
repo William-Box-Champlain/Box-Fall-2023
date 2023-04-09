@@ -36,6 +36,10 @@ void mouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 void mousePosCallback(GLFWwindow* window, double xpos, double ypos);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
+void updateLights(float time, ew::Transform lightTransform, ew::Transform pointLightTransform[]);
+void drawObjects(Shader& shader,int numOfObjects, ew::Mesh meshes[], ew::Transform transforms[]);
+void drawObject(Shader& shader, ew::Mesh& mesh, ew::Transform& transform);
+void processAllLights(Shader& litShader);
 //void drawUI(Material material, DirLight directionalLight, SpotLight spotLight, ew::Transform lightTransform, glm::vec3 orbitalCenter, int effectIndex, glm::vec2 effectIntensity);
 
 float lastFrameTime;
@@ -162,6 +166,9 @@ int main() {
 	//Used to draw shapes. This is the shader you will be completing.
 	Shader litShader("shaders/defaultLit.vert", "shaders/defaultLit.frag");
 
+	//Used for Shadow-Mapping
+	Shader shadowShader("shaders/shadowMapping.vert", "shaders/shadowMapping.frag");
+
 	//Used to draw light sphere
 	Shader unlitShader("shaders/defaultLit.vert", "shaders/unlit.frag");
 
@@ -183,6 +190,12 @@ int main() {
 	ew::Mesh planeMesh(&planeMeshData);
 	ew::Mesh cylinderMesh(&cylinderMeshData);
 
+	ew::Mesh sceneObjectMeshes[4] = { cubeMesh,planeMesh,cylinderMesh,sphereMesh };
+
+	ew::MeshData unlitSphere;
+	ew::createSphere(0.5, 128, unlitSphere);
+	ew::Mesh unlitSphereMesh(&unlitSphere);
+
 	//Enable back face culling
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
@@ -203,17 +216,17 @@ int main() {
 	ew::Transform lightTransform;
 	ew::Transform pointLightTransform[NUMBER_OF_POINTLIGHTS];
 
-
 	cubeTransform.position = glm::vec3(-2.0f, 0.0f, 0.0f);
 	sphereTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+	cylinderTransform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
 	planeTransform.position = glm::vec3(0.0f, -1.0f, 0.0f);
 	planeTransform.scale = glm::vec3(10.0f);
 
-	cylinderTransform.position = glm::vec3(2.0f, 0.0f, 0.0f);
-
 	lightTransform.scale = glm::vec3(0.5f);
 	lightTransform.position = glm::vec3(0.0f, 5.0f, 0.0f);
+
+	ew::Transform sceneObjectTransforms[4] = { cubeTransform,planeTransform,cylinderTransform,sphereTransform };
 
 	//Initialize material values
 	material.mAmbient = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -300,32 +313,10 @@ int main() {
 		processMaterial(litShader, "material", material);
 
 		//Update Lights
-		spotLight.mPosition = lightTransform.position;
-		spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees));
-		spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees));
-
-		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
-		{
-			glm::vec3 temp = orbitalCenter;
-			temp.x += glm::cos(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
-			temp.z += glm::sin(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
-			pointLightTransform[i].position = temp;
-		}
-
-		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
-		{
-			pointLights[i].mPosition = pointLightTransform[i].position;
-			pointLights[i].mRadius = pointLightRadius;
-		}
+		updateLights(time, lightTransform, pointLightTransform);
 
 		//Process Lights
-		processDirectionalLight(litShader, "dirLight", directionalLight);
-		processSpotLight(litShader, "spotLight", spotLight);
-		litShader.setInt("numberOfPointLights", NUMBER_OF_POINTLIGHTS);
-		for (size_t i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
-		{
-			processPointLight(litShader, "pointLights", i, pointLights[i]);
-		}
+		processAllLights(litShader);
 		//Draw first Pass
 		//Bind shadow-map
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap);
@@ -333,7 +324,19 @@ int main() {
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//Render from directional light's perspective
+		shadowShader.use();
 
+		glm::vec3 position = directionalLight.mDirection * -8.0f;
+		glm::vec3 target = glm::vec3(0.0f);
+		glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+
+		glm::mat4 lightView = glm::lookAt(position, target, up);
+
+		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 10.0f);
+
+		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+		shadowShader.setMat4("uLightSpaceMatrix", lightSpaceMatrix);
+		drawObjects(litShader, 4, sceneObjectMeshes, sceneObjectTransforms);
 
 		//Draw second pass
 		//Bind fbo
@@ -350,21 +353,9 @@ int main() {
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
-		//Draw cube
-		litShader.setMat4("_Model", cubeTransform.getModelMatrix());
-		cubeMesh.draw();
+		litShader.setMat4("_uLightSpaceMatrix", lightSpaceMatrix);
 
-		//Draw sphere
-		litShader.setMat4("_Model", sphereTransform.getModelMatrix());
-		sphereMesh.draw();
-
-		//Draw cylinder
-		litShader.setMat4("_Model", cylinderTransform.getModelMatrix());
-		cylinderMesh.draw();
-
-		//Draw plane
-		litShader.setMat4("_Model", planeTransform.getModelMatrix());
-		planeMesh.draw();
+		drawObjects(litShader,4, sceneObjectMeshes, sceneObjectTransforms);
 
 		//Draw light as a small sphere using unlit shader, ironically.
 		unlitShader.use();
@@ -373,14 +364,12 @@ int main() {
 
 		for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
 		{
-			unlitShader.setMat4("_Model", pointLightTransform[i].getModelMatrix());
 			unlitShader.setVec3("_Color", pointLights[i].mColor);
-			sphereMesh.draw();
+			drawObject(unlitShader, sphereMesh, pointLightTransform[i]);
 		}
 
-		unlitShader.setMat4("_Model", lightTransform.getModelMatrix());
 		unlitShader.setVec3("_Color", spotLight.mColor);
-		sphereMesh.draw();
+		drawObject(unlitShader, sphereMesh, lightTransform);
 
 		//Draw Third Pass / apply Screen-Shader Effects
 		//Apply Post-Processing Effects to screen-space
@@ -397,7 +386,6 @@ int main() {
 		screenShader.setInt("uEffect", effectIndex);
 		screenShader.setVec2("uOffsetDistance", effectIntensity);
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
-
 		//draw the PP-Quad with the new colorBuffer texture
 		postProcessingQuadMesh.draw();
 
@@ -640,6 +628,52 @@ GLuint createDepthMap(glm::vec2 shadowResolution)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	return fbo;
+}
+
+void updateLights(float time, ew::Transform lightTransform, ew::Transform pointLightTransform[])
+{
+	spotLight.mPosition = lightTransform.position;
+	spotLight.mMinAngle = glm::cos(glm::radians(spotLightMinAngleDegrees));
+	spotLight.mMaxAngle = glm::cos(glm::radians(spotLightMaxAngleDegrees));
+
+	for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+	{
+		glm::vec3 temp = orbitalCenter;
+		temp.x += glm::cos(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
+		temp.z += glm::sin(glm::radians(120.0f * i) + (orbitalSpeed * time)) * orbitalRadius;
+		pointLightTransform[i].position = temp;
+	}
+
+	for (int i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+	{
+		pointLights[i].mPosition = pointLightTransform[i].position;
+		pointLights[i].mRadius = pointLightRadius;
+	}
+}
+
+void processAllLights(Shader& litShader)
+{
+	processDirectionalLight(litShader, "dirLight", directionalLight);
+	processSpotLight(litShader, "spotLight", spotLight);
+	litShader.setInt("numberOfPointLights", NUMBER_OF_POINTLIGHTS);
+	for (size_t i = 0; i < NUMBER_OF_POINTLIGHTS; i++)
+	{
+		processPointLight(litShader, "pointLights", i, pointLights[i]);
+	}
+}
+
+void drawObjects(Shader& shader,int numOfObjects, ew::Mesh meshes[], ew::Transform transforms[])
+{
+	for (int i = 0; i < numOfObjects; i++)
+	{
+		drawObject(shader, meshes[i], transforms[i]);
+	}
+}
+
+void drawObject(Shader& shader, ew::Mesh& mesh, ew::Transform& transform)
+{
+	shader.setMat4("_Model", transform.getModelMatrix());
+	mesh.draw();
 }
 
 //Author: William Box

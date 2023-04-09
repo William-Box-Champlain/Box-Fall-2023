@@ -7,11 +7,16 @@ layout (location = 3) in vec2 vUv;
 uniform mat4 _Model;
 uniform mat4 _View;
 uniform mat4 _Projection; 
+uniform mat4 _LightSpaceMatrix;
 
-out vec3 Normal;
-out vec3 WorldPosition;
-out vec2 Uv;
-out mat3 TBN;
+out vert
+{
+    vec3 mWorldPosition;
+    vec3 mNormal;
+    vec2 mUv;
+    mat3 mTBN;
+    vec4 mlightSpacePosition;
+} vertOut;
 
 void main()
 {   
@@ -20,10 +25,11 @@ void main()
     vec3 N = normalize(vec3(_Model * vec4(vNormal,0.0)));
     vec3 B = normalize(cross(N,T));
     //create TBN matrix
-    TBN = mat3(T,B,N);
+    vertOut.mTBN = mat3(T,B,N);
 
-    WorldPosition = vec3(_Model * vec4(vPos,1));
-    Normal = vNormal;
-    Uv = vUv;
-    gl_Position = _Projection * _View * _Model * vec4(vPos,1);
+    vertOut.mWorldPosition = vec3(_Model * vec4(vPos,1.0));
+    vertOut.mNormal = vNormal;
+    vertOut.mUv = vUv;
+    vertOut.mlightSpacePosition = _LightSpaceMatrix * vec4(vertOut.mWorldPosition,1.0);
+    gl_Position = _Projection * _View * vec4(vertOut.mWorldPosition,1.0);
 }

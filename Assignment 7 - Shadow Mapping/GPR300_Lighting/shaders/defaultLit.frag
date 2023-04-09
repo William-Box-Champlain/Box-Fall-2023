@@ -1,10 +1,14 @@
 #version 450                          
 out vec4 FragColor;
 
-in vec3 WorldPosition;
-in vec3 Normal;
-in vec2 Uv;
-in mat3 TBN;
+in vert
+{
+    vec3 mWorldPosition;
+    vec3 mNormal;
+    vec2 mUv;
+    mat3 mTBN;
+    vec4 mlightSpacePosition;
+} vertIn;
 
 
 struct Material
@@ -52,15 +56,17 @@ struct DirLight
     float mIntensity;
 };
 
+float ShadowCalculations(vec4 lightSpacePosition);
+
 vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection);
 
 vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess);
 
-vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection);
+vec3 CalculateDirectionalLighting(DirLight light, float shadow, vec3 normal, vec3 cameraDirection);
 
-vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection);
+vec3 CalculatePointLight(PointLight light, float shadow, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection);
 
-vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition);
+vec3 CalculateSpotLight(SpotLight light, float shadow, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition);
 
 uniform vec3 uEyePosition;
 
@@ -76,35 +82,65 @@ uniform PointLight pointLights[MAX_NUMBER_OF_POINT_LIGHTS];
 uniform sampler2D uTexture;
 uniform sampler2D uNoise;
 uniform sampler2D uNormalMap;
+
+uniform sampler2D shadowMap;
+
 uniform float uTime;
 uniform float uSampleSize;
 
 void main(){
-    vec3 normal = normalize(Normal);
+    vec3 normal = normalize(vertIn.mNormal);
 
-    vec3 textureNormal = texture(uNormalMap,Uv).rgb;
+    vec3 textureNormal = texture(uNormalMap,vertIn.mUv).rgb;
     textureNormal = (textureNormal*2.0f) - 1.0f;
-    textureNormal = normalize(textureNormal * TBN);
+    textureNormal = normalize(textureNormal * vertIn.mTBN);
 
-    vec3 viewDirection = normalize(uEyePosition - WorldPosition);
+    vec3 viewDirection = normalize(uEyePosition - vertIn.mWorldPosition);
+
+    float shadow = ShadowCalculations(vertIn.mlightSpacePosition);
 
     vec3 totalLight = vec3(0.0f);
 
-    totalLight += CalculateDirectionalLighting(dirLight,textureNormal,viewDirection);
+    totalLight += CalculateDirectionalLighting(dirLight, shadow,textureNormal,viewDirection);
 
-    totalLight += CalculateSpotLight(spotLight, textureNormal, WorldPosition,viewDirection,uEyePosition);
+    //totalLight += CalculateSpotLight(spotLight, textureNormal, vertIn.mWorldPosition,viewDirection,uEyePosition);
 
-    for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],textureNormal,WorldPosition,viewDirection);
+    //for(int i = 0; i < numberOfPointLights; i++) totalLight += CalculatePointLight(pointLights[i],textureNormal,vertIn.mWorldPosition,viewDirection);
 
-    //vec2 scrollingUV = Uv + uTime;
+    //UV Noise stuff
     vec2 scrollingUV = vec2(1.0f,1.0f);
     vec2 noise = texture(uNoise,scrollingUV).rr * uSampleSize;
-    vec4 color = texture(uTexture,Uv+noise);
+    vec4 color = texture(uTexture,vertIn.mUv+noise);
 
     FragColor = color * vec4(totalLight,1.0f);
 }
 
-vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection)
+float ShadowCalculations(vec4 lightSpacePosition)
+{
+    float shadow;
+    
+    //perspective divide
+    vec3 projCoords = lightSpacePosition.xyz / lightSpacePosition.w;
+
+    //transform to 0 to 1 range
+    projCoords *= 0.5;
+    projCoords += 0.5;
+
+    //get closest depth value from light's perspective
+    float closestDepth = texture(shadowMap,projCoords.xy).r;
+
+    //get depth of fragment from light's perspective
+    float currentDepth = projCoords.z;
+
+    //check if current depth is in the shadow
+    shadow = currentDepth > closestDepth ? 1.0:0.0;
+
+
+
+    return shadow;
+};
+
+vec3 CalculateDirectionalLighting(DirLight light, float shadow, vec3 normal, vec3 cameraDirection)
 {
     vec3 ambient = material.mAmbient * light.mIntensity;
 
@@ -114,10 +150,10 @@ vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirect
     vec3 halfVector = normalize((light.mDirection + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess) * light.mIntensity;
 
-    return light.mColor * (ambient + diffuse + specular);
+    return light.mColor * (ambient + (1.0-shadow) * (diffuse + specular));
 }
 
-vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection)
+vec3 CalculatePointLight(PointLight light, float shadow, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection)
 {
     vec3 temp;
 
@@ -132,10 +168,10 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragmentPosition, v
     vec3 halfVector = normalize((lightDirection + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
-    return light.mColor * (ambient + diffuse + specular) * attenuatedIntensity;
+    return light.mColor * (ambient + (1.0-shadow) * (diffuse + specular)) * attenuatedIntensity;
 }
 
-vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition)
+vec3 CalculateSpotLight(SpotLight light, float shadow, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection, vec3 cameraPosition)
 {
     //calculate directionality and theta
     vec3 DirToFrag = -normalize(fragmentPosition - light.mPosition);
@@ -158,7 +194,7 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragmentPosition, vec
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess);
 
     //combine above calculated values and return
-    return light.mColor * (ambient + diffuse + specular) * distanceAttenutation * angularAttenuation;
+    return light.mColor * (ambient + (1.0-shadow) * (diffuse + specular)) * distanceAttenutation * angularAttenuation;
 }
 
 vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection)

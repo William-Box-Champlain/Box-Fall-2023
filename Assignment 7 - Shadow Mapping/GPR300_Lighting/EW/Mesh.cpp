@@ -43,5 +43,4 @@ namespace ew {
 		glBindVertexArray(mVAO);
 		glDrawElements(GL_TRIANGLES, mNumIndices, GL_UNSIGNED_INT, 0);
 	}
-
 }

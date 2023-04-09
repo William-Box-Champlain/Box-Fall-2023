@@ -105,5 +105,7 @@
   <ItemGroup>
     <None Include="shaders\screenShader.frag" />
     <None Include="shaders\screenShader.vert" />
+    <None Include="shaders\shadowMapping.vert" />
+    <None Include="shaders\shadowMapping.frag" />
   </ItemGroup>
 </Project>

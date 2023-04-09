@@ -164,6 +164,8 @@
   <ItemGroup>
     <None Include="shaders\screenShader.frag" />
     <None Include="shaders\screenShader.vert" />
+    <None Include="shaders\shadowMapping.frag" />
+    <None Include="shaders\shadowMapping.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
