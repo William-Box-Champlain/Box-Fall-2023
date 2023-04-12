@@ -320,13 +320,14 @@ int main() {
 		//Draw first Pass
 		//Bind shadow-map
 		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap);
-		//clear viewport
+		//setup viewport
+		glViewport(0, 0, SHADOW_RESOLUTION.x, SHADOW_RESOLUTION.y);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		//Render from directional light's perspective
 		shadowShader.use();
 
-		glm::vec3 position = directionalLight.mDirection * -8.0f;
+		glm::vec3 position = directionalLight.mDirection *  -8.0f;
 		glm::vec3 target = glm::vec3(0.0f);
 		glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -336,7 +337,7 @@ int main() {
 
 		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 		shadowShader.setMat4("uLightSpaceMatrix", lightSpaceMatrix);
-		drawObjects(litShader, 4, sceneObjectMeshes, sceneObjectTransforms);
+		drawObjects(shadowShader, 4, sceneObjectMeshes, sceneObjectTransforms);
 
 		//Draw second pass
 		//Bind fbo
@@ -350,6 +351,7 @@ int main() {
 		litShader.setInt("uTexture", 0);
 		litShader.setInt("uNormalMap", 1);
 		litShader.setInt("uNoise", 2);
+		litShader.setInt("uShadowMap", 3);
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
@@ -614,11 +616,13 @@ GLuint createDepthMap(glm::vec2 shadowResolution)
 	//create texture using depth buffer
 	GLuint depthMap;
 	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowResolution.x, shadowResolution.y, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	//attach depth texture to depth buffer
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);

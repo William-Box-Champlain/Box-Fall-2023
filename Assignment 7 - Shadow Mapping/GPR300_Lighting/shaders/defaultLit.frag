@@ -83,7 +83,7 @@ uniform sampler2D uTexture;
 uniform sampler2D uNoise;
 uniform sampler2D uNormalMap;
 
-uniform sampler2D shadowMap;
+uniform sampler2D uShadowMap;
 
 uniform float uTime;
 uniform float uSampleSize;
@@ -127,7 +127,7 @@ float ShadowCalculations(vec4 lightSpacePosition)
     projCoords += 0.5;
 
     //get closest depth value from light's perspective
-    float closestDepth = texture(shadowMap,projCoords.xy).r;
+    float closestDepth = texture(uShadowMap,projCoords.xy).r;
 
     //get depth of fragment from light's perspective
     float currentDepth = projCoords.z;
