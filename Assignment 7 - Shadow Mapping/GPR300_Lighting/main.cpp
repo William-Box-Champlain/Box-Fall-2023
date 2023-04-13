@@ -24,10 +24,16 @@
 
 #include "WB/LightStructs.h"
 
+struct DepthMap
+{
+	GLuint mFBO;
+	GLuint mDepthMap;
+};
+
 GLuint createTexture(std::string filepath);
 void createColorBuffer(GLuint &colorBuffer);
 GLuint createDepthBuffer();
-GLuint createDepthMap(glm::vec2 shadowResolution);
+DepthMap createDepthMap(glm::vec2 shadowResolution);
 
 void processInput(GLFWwindow* window);
 void resizeFrameBufferCallback(GLFWwindow* window, int width, int height);
@@ -153,16 +159,7 @@ int main() {
 	//GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
-	//bind textures
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, Texture);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, NormalMap);
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, noiseTexture);
-
+	
 	//Used to draw shapes. This is the shader you will be completing.
 	Shader litShader("shaders/defaultLit.vert", "shaders/defaultLit.frag");
 
@@ -266,7 +263,6 @@ int main() {
 	//Create Color Attachemnt for FBO
 	GLuint colorBuffer;
 	glGenTextures(1, &colorBuffer);
-	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, colorBuffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -278,6 +274,8 @@ int main() {
 	glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCREEN_WIDTH, SCREEN_HEIGHT);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		std::cout << "Framebuffer is not complete" << std::endl;
@@ -287,9 +285,7 @@ int main() {
 	ew::createQuad(2.0f, 2.0f, postProcessingQuadData);
 	ew::Mesh postProcessingQuadMesh(&postProcessingQuadData);
 
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	GLuint shadowMap = createDepthMap(SHADOW_RESOLUTION);
+	DepthMap shadowMap = createDepthMap(SHADOW_RESOLUTION);
 
 	glm::vec2 effectIntensity = glm::vec2(1.0f,1.0f);
 
@@ -319,7 +315,7 @@ int main() {
 		processAllLights(litShader);
 		//Draw first Pass
 		//Bind shadow-map
-		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap);
+		glBindFramebuffer(GL_FRAMEBUFFER, shadowMap.mFBO);
 		//setup viewport
 		glViewport(0, 0, SHADOW_RESOLUTION.x, SHADOW_RESOLUTION.y);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
@@ -342,16 +338,28 @@ int main() {
 		//Draw second pass
 		//Bind fbo
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
 		//Clear viewport
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		//Draw contents of scene
 		litShader.use();
+		  
+		//bind and set textures
 		litShader.setInt("uTexture", 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, Texture);
 		litShader.setInt("uNormalMap", 1);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, NormalMap);
 		litShader.setInt("uNoise", 2);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, noiseTexture);
 		litShader.setInt("uShadowMap", 3);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, shadowMap.mDepthMap);
+
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
@@ -375,6 +383,7 @@ int main() {
 
 		//Draw Third Pass / apply Screen-Shader Effects
 		//Apply Post-Processing Effects to screen-space
+		glActiveTexture(GL_TEXTURE4);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
@@ -384,7 +393,7 @@ int main() {
 
 		//use effects shader
 		screenShader.use();
-		screenShader.setInt("uScreenTexture", 3);
+		screenShader.setInt("uScreenTexture", 4);
 		screenShader.setInt("uEffect", effectIndex);
 		screenShader.setVec2("uOffsetDistance", effectIntensity);
 		glBindTexture(GL_TEXTURE_2D, colorBuffer);
@@ -564,6 +573,7 @@ GLuint createTexture(std::string filepath)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	stbi_image_free(textureData);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	return texture;
 }
 //Author: William Box
@@ -583,6 +593,8 @@ void createColorBuffer(GLuint &colorBuffer)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 //Author: William Box
 //Creates a buffer with a depth buffer cast to a texture
@@ -605,8 +617,9 @@ GLuint createDepthBuffer()
 }
 
 //Author: William Box
-GLuint createDepthMap(glm::vec2 shadowResolution)
+DepthMap createDepthMap(glm::vec2 shadowResolution)
 {
+	DepthMap depthMapOut;
 	//FBO Stuff
 	//Create and Bind
 	GLuint fbo;
@@ -631,7 +644,10 @@ GLuint createDepthMap(glm::vec2 shadowResolution)
 	glReadBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	return fbo;
+	depthMapOut.mFBO = fbo;
+	depthMapOut.mDepthMap = depthMap;
+	//TODO: Create encapsulation struct for FBO and depthMap;
+	return depthMapOut;
 }
 
 void updateLights(float time, ew::Transform lightTransform, ew::Transform pointLightTransform[])
