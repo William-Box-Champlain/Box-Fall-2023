@@ -326,7 +326,7 @@ int main() {
 		//Render from directional light's perspective
 		shadowShader.use();
 
-		glm::vec3 position = glm::normalize(directionalLight.mDirection) *  8.0f;
+		glm::vec3 position = glm::normalize(-directionalLight.mDirection) *  8.0f;
 		glm::vec3 target = glm::vec3(0.0f);
 		glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -367,6 +367,8 @@ int main() {
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
 		litShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
+
+		litShader.setVec3("uEyePosition", camera.getPosition());
 
 		litShader.setFloat("uMinBias", minBias);
 		litShader.setFloat("uMaxBias", maxBias);

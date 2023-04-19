@@ -144,7 +144,7 @@ float ShadowCalculations(vec4 lightSpacePosition, vec3 normal, vec3 toLight)
         for(int y = -1; y <= 1; y++)
         {
             float pcfDepth = texture(uShadowMap,projCoords.xy + vec2(x,y) * texelSize).r;
-            shadow = (currentDepth - bias) > pcfDepth ? 1.0:0.0;
+            shadow += (currentDepth - bias) > pcfDepth ? 1.0:0.0;
         }
     }
     shadow /= 9;
@@ -156,11 +156,11 @@ vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirect
     vec3 ambient = material.mAmbient * light.mIntensity;
 
     vec3 lightDirection = normalize(light.mDirection);
-    vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,lightDirection);
+    vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,-lightDirection);
 
-    float shadow = ShadowCalculations(vertIn.mlightSpacePosition,lightDirection,normal);
+    float shadow = ShadowCalculations(vertIn.mlightSpacePosition,-lightDirection,normal);
 
-    vec3 halfVector = normalize((light.mDirection + cameraDirection));
+    vec3 halfVector = normalize((-light.mDirection + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess) * light.mIntensity;
 
     return light.mColor * (ambient + (1.0-shadow) * (diffuse + specular));
@@ -217,6 +217,6 @@ vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection)
 
 vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess)
 {
-    vec3 specular = materialSpecular * max(dot(normal,halfVector),0.0f) * materialShininess;
+    vec3 specular = materialSpecular * pow(max(dot(normal,halfVector),0.0f),materialShininess);
     return specular;
 }
