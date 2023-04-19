@@ -105,7 +105,7 @@ float pointLightRadius = 5.0f;
 static const int NUMBER_OF_POINTLIGHTS = 3;
 PointLight pointLights[NUMBER_OF_POINTLIGHTS];
 
-glm::vec2 SHADOW_RESOLUTION = glm::vec2(1024, 1024);
+glm::vec2 SHADOW_RESOLUTION = glm::vec2(1080, 720);
 
 std::string CORRUGATED_STEEL_TEXTURE_FILE_NAME = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_Color.jpg";
 std::string CORRUGATED_STEEL_NORMAL_MAP = "textures/CorrugatedSteel/CorrugatedSteel007C_1K_NormalGL.jpg";
@@ -153,10 +153,10 @@ int main() {
 	ImGui::StyleColorsDark();
 
 	//Create Textures
-	GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
-	GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
-	//GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
-	//GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
+	//GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	//GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
+	GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
+	GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
 	
@@ -194,8 +194,8 @@ int main() {
 	ew::Mesh unlitSphereMesh(&unlitSphere);
 
 	//Enable back face culling
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_BACK);
 
 	//Enable blending
 	glEnable(GL_BLEND);
@@ -217,7 +217,7 @@ int main() {
 	sphereTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
 	cylinderTransform.position = glm::vec3(2.0f, 0.0f, 0.0f);
 
-	planeTransform.position = glm::vec3(0.0f, -1.0f, 0.0f);
+	planeTransform.position = glm::vec3(0.0f, -0.5f, 0.0f);
 	planeTransform.scale = glm::vec3(10.0f);
 
 	lightTransform.scale = glm::vec3(0.5f);
@@ -226,14 +226,14 @@ int main() {
 	ew::Transform sceneObjectTransforms[4] = { cubeTransform,planeTransform,cylinderTransform,sphereTransform };
 
 	//Initialize material values
-	material.mAmbient = glm::vec3(1.0f, 0.0f, 0.0f);
-	material.mDiffuse = glm::vec3(0.0f, 1.0f, 0.0f);
-	material.mSpecular = glm::vec3(0.0f, 0.0f, 1.0f);
+	material.mAmbient = glm::vec3(0.25f);
+	material.mDiffuse = glm::vec3(0.5f);
+	material.mSpecular = glm::vec3(1.0f);
 	material.mShininess = float(1.0f);
 
 	//Initialize directional light values
 	directionalLight.mColor = glm::vec3(0.75f, 0.75f, 0.75f);
-	directionalLight.mDirection = glm::normalize(glm::vec3(1.0f));
+	directionalLight.mDirection = glm::normalize(glm::vec3(1.0f,0.0f,0.5f));
 	directionalLight.mIntensity = float(0.5f);
 
 	//Initialize spot light values
@@ -289,6 +289,9 @@ int main() {
 
 	glm::vec2 effectIntensity = glm::vec2(1.0f,1.0f);
 
+	float minBias = 0.005;
+	float maxBias = 0.015;
+
 	//Draw Loop
 	while (!glfwWindowShouldClose(window)) {
 		processInput(window);
@@ -323,16 +326,16 @@ int main() {
 		//Render from directional light's perspective
 		shadowShader.use();
 
-		glm::vec3 position = directionalLight.mDirection *  -8.0f;
+		glm::vec3 position = glm::normalize(directionalLight.mDirection) *  8.0f;
 		glm::vec3 target = glm::vec3(0.0f);
 		glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
 		glm::mat4 lightView = glm::lookAt(position, target, up);
 
-		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 10.0f);
+		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 15.0f);
 
 		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-		shadowShader.setMat4("uLightSpaceMatrix", lightSpaceMatrix);
+		shadowShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
 		drawObjects(shadowShader, 4, sceneObjectMeshes, sceneObjectTransforms);
 
 		//Draw second pass
@@ -363,7 +366,10 @@ int main() {
 		litShader.setMat4("_Projection", camera.getProjectionMatrix());
 		litShader.setMat4("_View", camera.getViewMatrix());
 		litShader.setVec3("_LightPos", lightTransform.position);
-		litShader.setMat4("_uLightSpaceMatrix", lightSpaceMatrix);
+		litShader.setMat4("_LightSpaceMatrix", lightSpaceMatrix);
+
+		litShader.setFloat("uMinBias", minBias);
+		litShader.setFloat("uMaxBias", maxBias);
 
 		drawObjects(litShader,4, sceneObjectMeshes, sceneObjectTransforms);
 
@@ -410,7 +416,7 @@ int main() {
 
 		ImGui::Begin("Directional Light");
 		ImGui::ColorEdit3("Light Color", &directionalLight.mColor.r);
-		ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r, 0.1f, 0.0f, 1.0f);
+		ImGui::DragFloat3("Light Direction", &directionalLight.mDirection.r, 0.1f, -1.0f, 1.0f);
 		ImGui::DragFloat("Light Intensity", &directionalLight.mIntensity);
 		ImGui::End();
 
@@ -434,6 +440,11 @@ int main() {
 		ImGui::Begin("Post-Processing");
 		ImGui::Combo("Effect", &effectIndex, effectNames, IM_ARRAYSIZE(effectNames));
 		ImGui::DragFloat2("Effect Radius", &effectIntensity.r, 0.1f, 0.1f, 8.0f);
+		ImGui::End();
+
+		ImGui::Begin("Shadow Bias");
+		ImGui::DragFloat("Min Bias", &minBias, 0.001f, 0.001f, 0.5f);
+		ImGui::DragFloat("Max Bias", &maxBias, 0.001f, 0.001f, 0.5f);
 		ImGui::End();
 
 		ImGui::Render();

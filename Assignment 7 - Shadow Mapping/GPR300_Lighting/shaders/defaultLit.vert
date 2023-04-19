@@ -30,6 +30,6 @@ void main()
     vertOut.mWorldPosition = vec3(_Model * vec4(vPos,1.0));
     vertOut.mNormal = vNormal;
     vertOut.mUv = vUv;
-    vertOut.mlightSpacePosition = _LightSpaceMatrix * vec4(vertOut.mWorldPosition,1.0);
+    vertOut.mlightSpacePosition = _LightSpaceMatrix * vec4(vec3(_Model * vec4(vPos,1.0)),1.0);
     gl_Position = _Projection * _View * vec4(vertOut.mWorldPosition,1.0);
 }

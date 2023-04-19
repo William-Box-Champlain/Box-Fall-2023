@@ -56,13 +56,13 @@ struct DirLight
     float mIntensity;
 };
 
-float ShadowCalculations(vec4 lightSpacePosition);
+float ShadowCalculations(vec4 lightSpacePosition, vec3 normal, vec3 toLight);
 
 vec3 CalculateDiffuse(vec3 materialDiffuse, vec3 normal, vec3 lightDirection);
 
 vec3 CalculateSpecular(vec3 materialSpecular, vec3 normal, vec3 halfVector, float materialShininess);
 
-vec3 CalculateDirectionalLighting(DirLight light, float shadow, vec3 normal, vec3 cameraDirection);
+vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection);
 
 vec3 CalculatePointLight(PointLight light, float shadow, vec3 normal, vec3 fragmentPosition, vec3 cameraDirection);
 
@@ -88,6 +88,9 @@ uniform sampler2D uShadowMap;
 uniform float uTime;
 uniform float uSampleSize;
 
+uniform float uMinBias;
+uniform float uMaxBias;
+
 void main(){
     vec3 normal = normalize(vertIn.mNormal);
 
@@ -97,11 +100,11 @@ void main(){
 
     vec3 viewDirection = normalize(uEyePosition - vertIn.mWorldPosition);
 
-    float shadow = ShadowCalculations(vertIn.mlightSpacePosition);
+    
 
     vec3 totalLight = vec3(0.0f);
 
-    totalLight += CalculateDirectionalLighting(dirLight, shadow,textureNormal,viewDirection);
+    totalLight += CalculateDirectionalLighting(dirLight,textureNormal,viewDirection);
 
     //totalLight += CalculateSpotLight(spotLight, textureNormal, vertIn.mWorldPosition,viewDirection,uEyePosition);
 
@@ -115,16 +118,15 @@ void main(){
     FragColor = color * vec4(totalLight,1.0f);
 }
 
-float ShadowCalculations(vec4 lightSpacePosition)
+float ShadowCalculations(vec4 lightSpacePosition, vec3 normal, vec3 toLight)
 {
-    float shadow;
+    float shadow = 0.0;
     
     //perspective divide
     vec3 projCoords = lightSpacePosition.xyz / lightSpacePosition.w;
 
     //transform to 0 to 1 range
-    projCoords *= 0.5;
-    projCoords += 0.5;
+    projCoords = projCoords * 0.5 + 0.5;
 
     //get closest depth value from light's perspective
     float closestDepth = texture(uShadowMap,projCoords.xy).r;
@@ -132,20 +134,31 @@ float ShadowCalculations(vec4 lightSpacePosition)
     //get depth of fragment from light's perspective
     float currentDepth = projCoords.z;
 
+    //bias calculation
+    float bias = max(uMaxBias * (1.0 - dot(normal,toLight)),uMinBias);
+    vec2 texelSize = 1.0 / textureSize(uShadowMap,0);
+
     //check if current depth is in the shadow
-    shadow = currentDepth > closestDepth ? 1.0:0.0;
-
-
-
+    for(int x = -1; x <= 1; x++)
+    {
+        for(int y = -1; y <= 1; y++)
+        {
+            float pcfDepth = texture(uShadowMap,projCoords.xy + vec2(x,y) * texelSize).r;
+            shadow = (currentDepth - bias) > pcfDepth ? 1.0:0.0;
+        }
+    }
+    shadow /= 9;
     return shadow;
 };
 
-vec3 CalculateDirectionalLighting(DirLight light, float shadow, vec3 normal, vec3 cameraDirection)
+vec3 CalculateDirectionalLighting(DirLight light, vec3 normal, vec3 cameraDirection)
 {
     vec3 ambient = material.mAmbient * light.mIntensity;
 
     vec3 lightDirection = normalize(light.mDirection);
     vec3 diffuse = CalculateDiffuse(material.mDiffuse,normal,lightDirection);
+
+    float shadow = ShadowCalculations(vertIn.mlightSpacePosition,lightDirection,normal);
 
     vec3 halfVector = normalize((light.mDirection + cameraDirection));
     vec3 specular = CalculateSpecular(material.mSpecular,normal,halfVector,material.mShininess) * light.mIntensity;
