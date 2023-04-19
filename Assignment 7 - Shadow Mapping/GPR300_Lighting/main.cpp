@@ -153,10 +153,10 @@ int main() {
 	ImGui::StyleColorsDark();
 
 	//Create Textures
-	GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
-	GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
-	//GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
-	//GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
+	//GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	//GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
+	GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
+	GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
 	
