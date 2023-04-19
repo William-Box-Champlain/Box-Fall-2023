@@ -96,7 +96,7 @@ void main(){
 
     vec3 textureNormal = texture(uNormalMap,vertIn.mUv).rgb;
     textureNormal = (textureNormal*2.0f) - 1.0f;
-    textureNormal = normalize(textureNormal * vertIn.mTBN);
+    textureNormal = normalize(vertIn.mTBN * textureNormal);
 
     vec3 viewDirection = normalize(uEyePosition - vertIn.mWorldPosition);
 

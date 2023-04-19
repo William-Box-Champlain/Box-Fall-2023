@@ -153,10 +153,10 @@ int main() {
 	ImGui::StyleColorsDark();
 
 	//Create Textures
-	//GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
-	//GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
-	GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
-	GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
+	GLuint Texture = createTexture(CORRUGATED_STEEL_TEXTURE_FILE_NAME);
+	GLuint NormalMap = createTexture(CORRUGATED_STEEL_NORMAL_MAP);
+	//GLuint Texture = createTexture(PAVING_STONES_TEXTURE_FILE_NAME);
+	//GLuint NormalMap = createTexture(PAVING_STONES_NORMAL_MAP);
 	GLuint noiseTexture = createTexture(NOISE_TEXTURE_FILE_NAME);
 
 	
@@ -192,10 +192,6 @@ int main() {
 	ew::MeshData unlitSphere;
 	ew::createSphere(0.5, 128, unlitSphere);
 	ew::Mesh unlitSphereMesh(&unlitSphere);
-
-	//Enable back face culling
-	//glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
 
 	//Enable blending
 	glEnable(GL_BLEND);
@@ -323,6 +319,11 @@ int main() {
 		glViewport(0, 0, SHADOW_RESOLUTION.x, SHADOW_RESOLUTION.y);
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//Enable front face culling
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+
 		//Render from directional light's perspective
 		shadowShader.use();
 
@@ -345,6 +346,9 @@ int main() {
 		//Clear viewport
 		glClearColor(bgColor.r, bgColor.g, bgColor.b, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		//Enable back face culling
+		glCullFace(GL_BACK);
 
 		//Draw contents of scene
 		litShader.use();
@@ -413,7 +417,7 @@ int main() {
 		ImGui::ColorEdit3("Material Ambient", &material.mAmbient.r);
 		ImGui::ColorEdit3("Material Diffuse", &material.mDiffuse.r);
 		ImGui::ColorEdit3("Material Specular", &material.mSpecular.r);
-		ImGui::DragFloat("Material Shininess", &material.mShininess, 0.01f, 0.0f, 2.0f);
+		ImGui::DragFloat("Material Shininess", &material.mShininess, 1.0f, 2.0f, 512.0f);
 		ImGui::End();
 
 		ImGui::Begin("Directional Light");
